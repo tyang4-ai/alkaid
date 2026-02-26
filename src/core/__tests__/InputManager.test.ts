@@ -174,4 +174,38 @@ describe('InputManager', () => {
     expect(pos.x).toBe(123);
     expect(pos.y).toBe(456);
   });
+
+  // --- Left-click drag ---
+
+  it('left-click small movement (within dead zone) does not pan', () => {
+    mockCanvas._fire('mousedown', { button: 0, clientX: 500, clientY: 400 });
+    mockCanvas._fire('mousemove', { clientX: 503, clientY: 402 }); // 3.6px < 5px
+    expect(mockCamera.pan).not.toHaveBeenCalled();
+    expect(input.isDragging).toBe(false);
+  });
+
+  it('left-click drag past dead zone starts panning', () => {
+    mockCanvas._fire('mousedown', { button: 0, clientX: 500, clientY: 400 });
+    // Move past dead zone (>5px)
+    mockCanvas._fire('mousemove', { clientX: 510, clientY: 400 }); // 10px > 5px
+    expect(input.isDragging).toBe(true);
+    // Next move should pan
+    mockCanvas._fire('mousemove', { clientX: 530, clientY: 410 });
+    expect(mockCamera.pan).toHaveBeenCalled();
+    const [dx, dy] = mockCamera.pan.mock.calls[0];
+    expect(dx).toBeCloseTo(-20 / mockCamera.zoom);
+    expect(dy).toBeCloseTo(-10 / mockCamera.zoom);
+  });
+
+  it('left-click release resets drag state', () => {
+    mockCanvas._fire('mousedown', { button: 0, clientX: 500, clientY: 400 });
+    mockCanvas._fire('mousemove', { clientX: 520, clientY: 400 }); // past dead zone
+    expect(input.isDragging).toBe(true);
+    fireWindowEvent('mouseup', { button: 0 });
+    expect(input.isDragging).toBe(false);
+    // Further movement should not pan
+    mockCamera.pan.mockClear();
+    mockCanvas._fire('mousemove', { clientX: 550, clientY: 400 });
+    expect(mockCamera.pan).not.toHaveBeenCalled();
+  });
 });

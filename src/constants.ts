@@ -104,3 +104,4 @@ export const CAMERA_ZOOM_SPEED = 0.15;
 export const CAMERA_PAN_SPEED = 400;
 export const CAMERA_EDGE_SCROLL_ZONE = 20;
 export const CAMERA_LERP_FACTOR = 0.15;
+export const CAMERA_DRAG_DEAD_ZONE = 5; // px — left-click drag vs click threshold

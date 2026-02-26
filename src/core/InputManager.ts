@@ -3,6 +3,7 @@ import {
   CAMERA_PAN_SPEED,
   CAMERA_EDGE_SCROLL_ZONE,
   CAMERA_ZOOM_SPEED,
+  CAMERA_DRAG_DEAD_ZONE,
 } from '../constants';
 
 /**
@@ -18,6 +19,14 @@ export class InputManager {
   private middleButtonDown = false;
   private dragLastX = 0;
   private dragLastY = 0;
+
+  // Left-click drag state (dead zone distinguishes click from drag)
+  private leftButtonDown = false;
+  private leftDragging = false;
+  private leftDownX = 0;
+  private leftDownY = 0;
+  private leftDragLastX = 0;
+  private leftDragLastY = 0;
 
   // Bound handlers for removal
   private handleKeyDown: (e: KeyboardEvent) => void;
@@ -104,6 +113,11 @@ export class InputManager {
     return { x: this._mouseX, y: this._mouseY };
   }
 
+  /** True when the user is actively left-click dragging (past dead zone). */
+  get isDragging(): boolean {
+    return this.leftDragging;
+  }
+
   destroy(): void {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
@@ -138,18 +152,43 @@ export class InputManager {
     this._mouseX = e.clientX - rect.left;
     this._mouseY = e.clientY - rect.top;
 
+    // Middle-click drag
     if (this.middleButtonDown) {
       const dx = e.clientX - this.dragLastX;
       const dy = e.clientY - this.dragLastY;
-      // Inverted for map-drag feel
       this.camera.pan(-dx / this.camera.zoom, -dy / this.camera.zoom);
       this.dragLastX = e.clientX;
       this.dragLastY = e.clientY;
     }
+
+    // Left-click drag (with dead zone)
+    if (this.leftButtonDown) {
+      if (!this.leftDragging) {
+        const dx = e.clientX - this.leftDownX;
+        const dy = e.clientY - this.leftDownY;
+        if (dx * dx + dy * dy > CAMERA_DRAG_DEAD_ZONE * CAMERA_DRAG_DEAD_ZONE) {
+          this.leftDragging = true;
+          this.leftDragLastX = e.clientX;
+          this.leftDragLastY = e.clientY;
+        }
+      } else {
+        const dx = e.clientX - this.leftDragLastX;
+        const dy = e.clientY - this.leftDragLastY;
+        this.camera.pan(-dx / this.camera.zoom, -dy / this.camera.zoom);
+        this.leftDragLastX = e.clientX;
+        this.leftDragLastY = e.clientY;
+      }
+    }
   }
 
   private onMouseDown(e: MouseEvent): void {
-    if (e.button === 1) {
+    if (e.button === 0) {
+      // Left click — start potential drag
+      this.leftButtonDown = true;
+      this.leftDragging = false;
+      this.leftDownX = e.clientX;
+      this.leftDownY = e.clientY;
+    } else if (e.button === 1) {
       // Middle click
       this.middleButtonDown = true;
       this.dragLastX = e.clientX;
@@ -159,7 +198,11 @@ export class InputManager {
   }
 
   private onMouseUp(e: MouseEvent): void {
-    if (e.button === 1) {
+    if (e.button === 0) {
+      // TODO Step 5: if !leftDragging, this was a click — handle unit selection
+      this.leftButtonDown = false;
+      this.leftDragging = false;
+    } else if (e.button === 1) {
       this.middleButtonDown = false;
     }
   }
