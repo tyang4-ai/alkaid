@@ -1,12 +1,16 @@
 import { Renderer } from './rendering/Renderer';
 import { TerrainRenderer } from './rendering/TerrainRenderer';
+import { UnitRenderer } from './rendering/UnitRenderer';
 import { GameLoop } from './core/GameLoop';
 import { GameState } from './simulation/GameState';
 import { TerrainGenerator } from './simulation/terrain/TerrainGenerator';
+import { UnitManager } from './simulation/units/UnitManager';
+import { spawnTestArmies } from './simulation/units/TestScenario';
 import { Camera } from './core/Camera';
 import { InputManager } from './core/InputManager';
 import { eventBus } from './core/EventBus';
 import { DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, TILE_SIZE } from './constants';
+import type { UnitType } from './constants';
 
 async function main(): Promise<void> {
   const container = document.getElementById('game-container');
@@ -26,6 +30,11 @@ async function main(): Promise<void> {
   terrainRenderer.bake(terrainGrid, renderer.pixiRenderer);
   eventBus.emit('terrain:generated', { seed, templateId });
 
+  // Units
+  const unitManager = new UnitManager();
+  const unitRenderer = new UnitRenderer(renderer.unitLayer, renderer.pixiRenderer);
+  spawnTestArmies(unitManager, terrainGrid);
+
   // Camera + input
   const mapPixelW = DEFAULT_MAP_WIDTH * TILE_SIZE;
   const mapPixelH = DEFAULT_MAP_HEIGHT * TILE_SIZE;
@@ -38,7 +47,7 @@ async function main(): Promise<void> {
 
   let lastFrameTime = performance.now();
 
-  gameLoop.onSimTick((dt) => gameState.tick(dt));
+  gameLoop.onSimTick((dt) => { gameState.tick(dt); unitManager.tick(dt); });
   gameLoop.onRender((alpha) => {
     const now = performance.now();
     const frameDt = now - lastFrameTime;
@@ -48,7 +57,8 @@ async function main(): Promise<void> {
     camera.update(frameDt);
     renderer.applyCamera(camera);
 
-    renderer.updateFPS(gameLoop.currentFPS, gameLoop.currentTick);
+    unitRenderer.update(unitManager.getAll(), alpha);
+    renderer.updateFPS(gameLoop.currentFPS, gameLoop.currentTick, unitManager.count);
     renderer.render(alpha);
   });
 
@@ -62,6 +72,9 @@ async function main(): Promise<void> {
   (window as any).__alkaid = {
     gameLoop, gameState, renderer, eventBus,
     terrainGrid, terrainRenderer, camera, inputManager,
+    unitManager, unitRenderer,
+    spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
+      unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),
     resume: () => gameLoop.resume(),
     setSpeed: (s: number) => gameLoop.setSpeed(s),

@@ -7,6 +7,9 @@ export interface GameEvents {
   'speed:changed': { multiplier: number };
   'terrain:generated': { seed: number; templateId: string };
   'camera:moved': { x: number; y: number; zoom: number };
+  'unit:spawned': { id: number; type: number; team: number };
+  'unit:destroyed': { id: number };
+  'units:cleared': undefined;
 }
 
 type EventKey = keyof GameEvents;

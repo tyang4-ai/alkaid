@@ -105,3 +105,177 @@ export const CAMERA_PAN_SPEED = 400;
 export const CAMERA_EDGE_SCROLL_ZONE = 20;
 export const CAMERA_LERP_FACTOR = 0.15;
 export const CAMERA_DRAG_DEAD_ZONE = 5; // px — left-click drag vs click threshold
+
+// --- Unit Types (Step 4) ---
+export const UnitType = {
+  // Land (0-9)
+  JI_HALBERDIERS: 0,
+  DAO_SWORDSMEN: 1,
+  NU_CROSSBOWMEN: 2,
+  GONG_ARCHERS: 3,
+  LIGHT_CAVALRY: 4,
+  HEAVY_CAVALRY: 5,
+  HORSE_ARCHERS: 6,
+  SIEGE_ENGINEERS: 7,
+  ELITE_GUARD: 8,
+  SCOUTS: 9,
+  // Naval (10-12)
+  MENG_CHONG: 10,
+  LOU_CHUAN: 11,
+  FIRE_SHIPS: 12,
+} as const;
+export type UnitType = (typeof UnitType)[keyof typeof UnitType];
+
+export const UnitCategory = {
+  INFANTRY: 0,
+  RANGED: 1,
+  CAVALRY: 2,
+  SIEGE: 3,
+  NAVAL: 4,
+} as const;
+export type UnitCategory = (typeof UnitCategory)[keyof typeof UnitCategory];
+
+export const UnitState = {
+  IDLE: 0,
+  MOVING: 1,
+  ATTACKING: 2,
+  DEFENDING: 3,
+  ROUTING: 4,
+  DEAD: 5,
+} as const;
+export type UnitState = (typeof UnitState)[keyof typeof UnitState];
+
+// --- Unit Type Configuration ---
+export interface UnitTypeConfig {
+  type: UnitType;
+  displayName: string;
+  chineseName: string;
+  category: UnitCategory;
+  maxSize: number;
+  hpPerSoldier: number;
+  damage: number;
+  attackSpeed: number;   // hits or volleys per sec
+  range: number;         // tiles
+  armor: number;
+  armorPen: number;
+  speed: number;         // tiles/sec
+  cost: number;          // gold
+}
+
+export const UNIT_TYPE_CONFIGS: Record<UnitType, UnitTypeConfig> = {
+  [UnitType.JI_HALBERDIERS]: {
+    type: UnitType.JI_HALBERDIERS, displayName: 'Ji Halberdiers', chineseName: '戟兵',
+    category: UnitCategory.INFANTRY, maxSize: 120, hpPerSoldier: 100,
+    damage: 8, attackSpeed: 1.0, range: 1, armor: 6, armorPen: 0, speed: 1.0, cost: 80,
+  },
+  [UnitType.DAO_SWORDSMEN]: {
+    type: UnitType.DAO_SWORDSMEN, displayName: 'Dao Swordsmen', chineseName: '刀兵',
+    category: UnitCategory.INFANTRY, maxSize: 80, hpPerSoldier: 90,
+    damage: 12, attackSpeed: 1.2, range: 1, armor: 4, armorPen: 0, speed: 1.2, cost: 100,
+  },
+  [UnitType.NU_CROSSBOWMEN]: {
+    type: UnitType.NU_CROSSBOWMEN, displayName: 'Nu Crossbowmen', chineseName: '弩兵',
+    category: UnitCategory.RANGED, maxSize: 100, hpPerSoldier: 70,
+    damage: 15, attackSpeed: 0.33, range: 8, armor: 2, armorPen: 3, speed: 0.8, cost: 90,
+  },
+  [UnitType.GONG_ARCHERS]: {
+    type: UnitType.GONG_ARCHERS, displayName: 'Gong Archers', chineseName: '弓兵',
+    category: UnitCategory.RANGED, maxSize: 80, hpPerSoldier: 65,
+    damage: 9, attackSpeed: 0.8, range: 6, armor: 1, armorPen: 1, speed: 1.1, cost: 120,
+  },
+  [UnitType.LIGHT_CAVALRY]: {
+    type: UnitType.LIGHT_CAVALRY, displayName: 'Light Cavalry', chineseName: '轻骑',
+    category: UnitCategory.CAVALRY, maxSize: 40, hpPerSoldier: 85,
+    damage: 10, attackSpeed: 0.9, range: 1, armor: 3, armorPen: 0, speed: 2.5, cost: 200,
+  },
+  [UnitType.HEAVY_CAVALRY]: {
+    type: UnitType.HEAVY_CAVALRY, displayName: 'Heavy Cavalry', chineseName: '重骑',
+    category: UnitCategory.CAVALRY, maxSize: 25, hpPerSoldier: 110,
+    damage: 18, attackSpeed: 0.7, range: 1, armor: 8, armorPen: 0, speed: 2.0, cost: 350,
+  },
+  [UnitType.HORSE_ARCHERS]: {
+    type: UnitType.HORSE_ARCHERS, displayName: 'Horse Archers', chineseName: '骑射',
+    category: UnitCategory.CAVALRY, maxSize: 30, hpPerSoldier: 75,
+    damage: 7, attackSpeed: 0.6, range: 5, armor: 2, armorPen: 0, speed: 2.3, cost: 280,
+  },
+  [UnitType.SIEGE_ENGINEERS]: {
+    type: UnitType.SIEGE_ENGINEERS, displayName: 'Siege Engineers', chineseName: '攻城兵',
+    category: UnitCategory.SIEGE, maxSize: 30, hpPerSoldier: 60,
+    damage: 25, attackSpeed: 0.1, range: 10, armor: 0, armorPen: 0, speed: 0.4, cost: 500,
+  },
+  [UnitType.ELITE_GUARD]: {
+    type: UnitType.ELITE_GUARD, displayName: 'Elite Guard', chineseName: '亲卫',
+    category: UnitCategory.INFANTRY, maxSize: 30, hpPerSoldier: 130,
+    damage: 16, attackSpeed: 1.1, range: 1, armor: 7, armorPen: 0, speed: 1.3, cost: 400,
+  },
+  [UnitType.SCOUTS]: {
+    type: UnitType.SCOUTS, displayName: 'Scouts', chineseName: '斥候',
+    category: UnitCategory.INFANTRY, maxSize: 20, hpPerSoldier: 50,
+    damage: 5, attackSpeed: 1.0, range: 1, armor: 1, armorPen: 0, speed: 2.0, cost: 60,
+  },
+  [UnitType.MENG_CHONG]: {
+    type: UnitType.MENG_CHONG, displayName: 'Meng Chong', chineseName: '蒙冲',
+    category: UnitCategory.NAVAL, maxSize: 40, hpPerSoldier: 80,
+    damage: 14, attackSpeed: 0.8, range: 1, armor: 5, armorPen: 0, speed: 1.8, cost: 250,
+  },
+  [UnitType.LOU_CHUAN]: {
+    type: UnitType.LOU_CHUAN, displayName: 'Lou Chuan', chineseName: '楼船',
+    category: UnitCategory.NAVAL, maxSize: 100, hpPerSoldier: 70,
+    damage: 12, attackSpeed: 0.5, range: 6, armor: 4, armorPen: 0, speed: 0.8, cost: 450,
+  },
+  [UnitType.FIRE_SHIPS]: {
+    type: UnitType.FIRE_SHIPS, displayName: 'Fire Ships', chineseName: '火船',
+    category: UnitCategory.NAVAL, maxSize: 10, hpPerSoldier: 40,
+    damage: 200, attackSpeed: 0, range: 0, armor: 0, armorPen: 0, speed: 2.2, cost: 150,
+  },
+};
+
+// --- Type Matchup Table (land units 0-9 only) ---
+// Rows = attacker UnitType, Cols = defender UnitType
+// prettier-ignore
+export const TYPE_MATCHUP_TABLE: number[][] = [
+  /* Halberd  */ [1.0, 0.8, 1.0, 1.0, 1.5, 1.5, 1.5, 1.0, 0.8, 1.2],
+  /* Sword    */ [1.2, 1.0, 1.3, 1.3, 0.7, 0.6, 0.7, 1.5, 0.9, 1.5],
+  /* Xbow     */ [1.2, 1.0, 1.0, 1.0, 0.8, 0.7, 0.8, 1.0, 1.0, 1.0],
+  /* Archer   */ [1.0, 0.9, 1.0, 1.0, 1.0, 0.6, 1.0, 1.2, 0.8, 1.2],
+  /* L.Cav    */ [0.6, 1.1, 1.5, 1.5, 1.0, 0.7, 1.0, 2.0, 0.8, 1.5],
+  /* H.Cav    */ [0.5, 1.3, 1.8, 1.8, 1.3, 1.0, 1.2, 2.5, 1.0, 2.0],
+  /* H.Archer */ [0.7, 0.8, 0.9, 0.9, 1.1, 0.8, 1.0, 1.3, 0.7, 1.0],
+  /* Siege    */ [0.5, 0.5, 0.5, 0.5, 0.3, 0.3, 0.3, 1.0, 0.5, 0.5],
+  /* Elite    */ [1.2, 1.1, 1.2, 1.2, 1.3, 1.2, 1.2, 1.5, 1.0, 1.5],
+  /* Scout    */ [0.5, 0.4, 0.5, 0.5, 0.4, 0.3, 0.4, 0.8, 0.3, 1.0],
+];
+
+// --- Unit Rendering (Step 4) ---
+export const UNIT_BASE_DOT_RADIUS = 6;   // px at full strength
+export const UNIT_MIN_DOT_RADIUS = 2;    // minimum visible
+
+export const TEAM_COLORS = {
+  PLAYER: 0x4A90D9,   // Muted blue
+  ENEMY: 0xC75050,    // Muted red
+  NEUTRAL: 0x888888,
+} as const;
+
+export const UNIT_SHAPE = {
+  CIRCLE: 0,    // Infantry
+  TRIANGLE: 1,  // Cavalry
+  DIAMOND: 2,   // Ranged
+  SQUARE: 3,    // Siege
+  HEXAGON: 4,   // Naval
+} as const;
+
+export const UNIT_TYPE_SHAPE: Record<UnitType, number> = {
+  [UnitType.JI_HALBERDIERS]: UNIT_SHAPE.CIRCLE,
+  [UnitType.DAO_SWORDSMEN]: UNIT_SHAPE.CIRCLE,
+  [UnitType.NU_CROSSBOWMEN]: UNIT_SHAPE.DIAMOND,
+  [UnitType.GONG_ARCHERS]: UNIT_SHAPE.DIAMOND,
+  [UnitType.LIGHT_CAVALRY]: UNIT_SHAPE.TRIANGLE,
+  [UnitType.HEAVY_CAVALRY]: UNIT_SHAPE.TRIANGLE,
+  [UnitType.HORSE_ARCHERS]: UNIT_SHAPE.TRIANGLE,
+  [UnitType.SIEGE_ENGINEERS]: UNIT_SHAPE.SQUARE,
+  [UnitType.ELITE_GUARD]: UNIT_SHAPE.CIRCLE,
+  [UnitType.SCOUTS]: UNIT_SHAPE.CIRCLE,
+  [UnitType.MENG_CHONG]: UNIT_SHAPE.HEXAGON,
+  [UnitType.LOU_CHUAN]: UNIT_SHAPE.HEXAGON,
+  [UnitType.FIRE_SHIPS]: UNIT_SHAPE.HEXAGON,
+};

@@ -11,6 +11,7 @@ export class Renderer {
   public uiLayer!: Container;
   private fpsText!: Text;
   private tickText!: Text;
+  private unitCountText!: Text;
   private initialized = false;
 
   get canvas(): HTMLCanvasElement {
@@ -84,12 +85,17 @@ export class Renderer {
     this.fpsText.position.set(8, 8);
     this.tickText = new Text({ text: 'Tick: 0', style });
     this.tickText.position.set(8, 26);
-    this.uiLayer.addChild(this.fpsText, this.tickText);
+    this.unitCountText = new Text({ text: 'Units: 0', style });
+    this.unitCountText.position.set(8, 44);
+    this.uiLayer.addChild(this.fpsText, this.tickText, this.unitCountText);
   }
 
-  updateFPS(fps: number, tick: number): void {
+  updateFPS(fps: number, tick: number, unitCount?: number): void {
     this.fpsText.text = `FPS: ${fps}`;
     this.tickText.text = `Tick: ${tick}`;
+    if (unitCount !== undefined) {
+      this.unitCountText.text = `Units: ${unitCount}`;
+    }
   }
 
   render(_alpha: number): void {
