@@ -5,6 +5,8 @@ export interface GameEvents {
   'game:tick': { tickNumber: number; dt: number };
   'render:frame': { alpha: number; fps: number };
   'speed:changed': { multiplier: number };
+  'terrain:generated': { seed: number; templateId: string };
+  'camera:moved': { x: number; y: number; zoom: number };
 }
 
 type EventKey = keyof GameEvents;

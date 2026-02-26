@@ -1,14 +1,14 @@
 # Alkaid (破军) — Implementation Progress
 
-Last updated: 2026-02-26
+Last updated: 2026-02-28
 
 ## Phase 1: Core Engine
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
 | 1 | Project scaffolding + game loop | DONE | pnpm+Vite+PixiJS 8.16+Vitest. GameLoop (20Hz), EventBus, Renderer, FPS counter. 24 tests pass. |
-| 2 | Terrain generation + rendering | TODO | Simplex noise, contour lines, 5 templates |
-| 3 | Camera system | TODO | Pan, zoom, bounds |
+| 2 | Terrain generation + rendering | DONE | Simplex fBm elevation+moisture, 5 map templates, river gen, biome assignment, 4-bit auto-tile bitmask, marching squares contour lines, RenderTexture baking. 29 new tests (53 total). |
+| 3 | Camera system | DONE | WASD/arrow/edge-scroll panning, scroll-wheel zoom (cursor-anchored), middle-click drag, smooth lerp, bounds clamping. Camera (pure data) + InputManager (DOM events) + Renderer worldContainer restructure. 34 new tests (87 total). |
 | 4 | Unit spawning + rendering | TODO | 13 unit types, dot sizing, interpolation |
 | 5 | Selection + input | TODO | Click, box-select, right-click orders |
 | 5b | Deployment phase | TODO | Drag-drop, 5 formations, reserve system |
@@ -64,3 +64,5 @@ Last updated: 2026-02-26
 ## Session Log
 - **2026-02-25**: Design phase complete. All reference docs written. Plan approved. Ready to begin Step 1.
 - **2026-02-26**: Step 1 complete. Vite+pnpm scaffold, PixiJS 8.16.0+Vitest. All core files written (constants, EventBus, GameState, GameLoop, Renderer, main.ts). 24 unit tests pass. Dev server at localhost:3000.
+- **2026-02-27**: Step 2 complete. Terrain generation + rendering. SeededRandom (mulberry32), simplex-noise fBm, 5 map templates (river_valley, mountain_pass, open_plains, wetlands, siege), river generation, biome assignment, 4-bit auto-tile bitmask, marching squares contour lines, RenderTexture baking. 53 tests pass. `__alkaid.regen(seed, template)` for debug regeneration.
+- **2026-02-27**: Step 3 complete. Camera system. Pure-data Camera class (pan, zoom, lerp, bounds clamping, coordinate conversion). InputManager (WASD/arrows, edge scroll, middle-click drag, scroll-wheel zoom). Renderer restructured with worldContainer for camera transforms, uiLayer stays fixed. 87 tests pass.

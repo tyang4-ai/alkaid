@@ -1,8 +1,10 @@
 import { Application, Container, Text, TextStyle } from 'pixi.js';
 import { CANVAS_BG_COLOR } from '../constants';
+import type { Camera } from '../core/Camera';
 
 export class Renderer {
   private app!: Application;
+  public worldContainer!: Container;
   public terrainLayer!: Container;
   public unitLayer!: Container;
   public effectLayer!: Container;
@@ -18,6 +20,8 @@ export class Renderer {
   get stage(): Container {
     return this.app.stage;
   }
+
+  get pixiRenderer() { return this.app.renderer; }
 
   async init(container: HTMLElement): Promise<void> {
     this.app = new Application();
@@ -41,16 +45,32 @@ export class Renderer {
   }
 
   private setupLayers(): void {
+    this.worldContainer = new Container();
     this.terrainLayer = new Container();
     this.unitLayer = new Container();
     this.effectLayer = new Container();
     this.uiLayer = new Container();
-    this.app.stage.addChild(
+
+    // World layers inside worldContainer (camera transforms here)
+    this.worldContainer.addChild(
       this.terrainLayer,
       this.unitLayer,
       this.effectLayer,
-      this.uiLayer,
     );
+
+    // uiLayer stays at stage level (HUD, unaffected by camera)
+    this.app.stage.addChild(this.worldContainer, this.uiLayer);
+  }
+
+  /** Apply camera transform to the world container. */
+  applyCamera(camera: Camera): void {
+    const vpW = this.app.screen.width;
+    const vpH = this.app.screen.height;
+    this.worldContainer.position.set(
+      vpW / 2 - camera.x * camera.zoom,
+      vpH / 2 - camera.y * camera.zoom,
+    );
+    this.worldContainer.scale.set(camera.zoom);
   }
 
   private setupFPSDisplay(): void {
