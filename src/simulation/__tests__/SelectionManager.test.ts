@@ -10,6 +10,10 @@ function makeUnit(id: number, x: number, y: number, state: UnitStateType = UnitS
     size: 100, maxSize: 100, hp: 10000, morale: 70, fatigue: 0,
     supply: 100, experience: 0, state, facing: 0,
     path: null, pathIndex: 0, targetX: x, targetY: y,
+    isGeneral: false, pendingOrderType: null, pendingOrderTick: 0,
+    attackCooldown: 0, lastAttackTick: 0, hasCharged: false,
+    combatTargetId: -1, combatTicks: 0, siegeSetupTicks: 0,
+    formUpTicks: 0, disengageTicks: 0, orderModifier: null, routTicks: 0,
   };
 }
 

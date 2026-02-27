@@ -30,6 +30,21 @@ export interface GameEvents {
   'input:rightDragStart': { worldX: number; worldY: number; screenX: number; screenY: number };
   'input:rightDragMove': { worldX: number; worldY: number; screenX: number; screenY: number };
   'input:rightDragEnd': { worldX: number; worldY: number; screenX: number; screenY: number };
+
+  // Command system (Step 7)
+  'command:messengerSent': { targetUnitId: number; orderType: number };
+  'command:orderDelivered': { targetUnitId: number; orderType: number };
+  'command:orderMisinterpreted': { targetUnitId: number; originalType: number; newType: number };
+
+  // Combat system (Step 8)
+  'combat:engaged': { attackerId: number; defenderId: number };
+  'combat:damage': { attackerId: number; defenderId: number; damage: number; killed: number };
+  'combat:unitDestroyed': { unitId: number; killedBy: number };
+  'combat:chargeImpact': { unitId: number; targetId: number; damage: number };
+  'unit:routed': { unitId: number; morale: number };
+  'unit:rallied': { unitId: number };
+  'unit:combined': { survivorId: number; absorbedId: number };
+  'unit:split': { originalId: number; newId: number };
 }
 
 type EventKey = keyof GameEvents;

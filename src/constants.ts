@@ -123,6 +123,8 @@ export const UnitType = {
   MENG_CHONG: 10,
   LOU_CHUAN: 11,
   FIRE_SHIPS: 12,
+  // Special (13)
+  GENERAL: 13,
 } as const;
 export type UnitType = (typeof UnitType)[keyof typeof UnitType];
 
@@ -228,6 +230,11 @@ export const UNIT_TYPE_CONFIGS: Record<UnitType, UnitTypeConfig> = {
     category: UnitCategory.NAVAL, maxSize: 10, hpPerSoldier: 40,
     damage: 200, attackSpeed: 0, range: 0, armor: 0, armorPen: 0, speed: 2.2, cost: 150,
   },
+  [UnitType.GENERAL]: {
+    type: UnitType.GENERAL, displayName: 'General', chineseName: '将军',
+    category: UnitCategory.INFANTRY, maxSize: 1, hpPerSoldier: 200,
+    damage: 5, attackSpeed: 1.0, range: 1, armor: 10, armorPen: 0, speed: 1.5, cost: 0,
+  },
 };
 
 // --- Type Matchup Table (land units 0-9 only) ---
@@ -278,6 +285,7 @@ export const UNIT_TYPE_SHAPE: Record<UnitType, number> = {
   [UnitType.MENG_CHONG]: UNIT_SHAPE.HEXAGON,
   [UnitType.LOU_CHUAN]: UNIT_SHAPE.HEXAGON,
   [UnitType.FIRE_SHIPS]: UNIT_SHAPE.HEXAGON,
+  [UnitType.GENERAL]: UNIT_SHAPE.CIRCLE,
 };
 
 // --- Selection (Step 5) ---
@@ -303,6 +311,7 @@ export const OrderType = {
   CHARGE: 5,
   FORM_UP: 6,
   DISENGAGE: 7,
+  RALLY: 8,
 } as const;
 export type OrderType = (typeof OrderType)[keyof typeof OrderType];
 
@@ -315,6 +324,7 @@ export const ORDER_DISPLAY: Record<OrderType, { label: string; chinese: string; 
   [OrderType.CHARGE]:     { label: 'Charge',     chinese: '冲锋', color: 0xDD4444 },
   [OrderType.FORM_UP]:    { label: 'Form Up',    chinese: '列阵', color: 0x4488CC },
   [OrderType.DISENGAGE]:  { label: 'Disengage',  chinese: '脱离', color: 0x888888 },
+  [OrderType.RALLY]:      { label: 'Rally',      chinese: '集结', color: 0x44CC44 },
 };
 
 export const ORDER_LINE_DASH = 4;
@@ -461,3 +471,69 @@ export function getMoveCost(unitType: UnitType, terrainType: TerrainType): numbe
   }
   return TERRAIN_STATS[terrainType].moveCost;
 }
+
+/** Get type matchup multiplier. Handles land units (0-9) from table, General (13) defaults. */
+export function getTypeMatchup(attacker: UnitType, defender: UnitType): number {
+  // General attacking: weak (0.5), General defending: neutral (1.0)
+  if (attacker === UnitType.GENERAL) return 0.5;
+  if (defender === UnitType.GENERAL) return 1.0;
+  // Naval/out-of-range: default 1.0
+  if (attacker > 9 || defender > 9) return 1.0;
+  return TYPE_MATCHUP_TABLE[attacker][defender];
+}
+
+/** Check if a unit type is ranged (fires projectiles). */
+export function isRangedUnit(unitType: UnitType): boolean {
+  return unitType === UnitType.NU_CROSSBOWMEN
+    || unitType === UnitType.GONG_ARCHERS
+    || unitType === UnitType.HORSE_ARCHERS
+    || unitType === UnitType.SIEGE_ENGINEERS;
+}
+
+/** Check if a unit type can fire while moving. */
+export function canFireWhileMoving(unitType: UnitType): boolean {
+  return unitType === UnitType.HORSE_ARCHERS || unitType === UnitType.GONG_ARCHERS;
+}
+
+// --- Command System (Step 7) ---
+export const COMMAND_RADIUS_FRACTION = 0.30;       // 30% of map width
+export const MESSENGER_SPEED = 4.0;                // tiles/sec base
+export const MESSENGER_SPEED_IN_RADIUS = 12.0;     // tiles/sec within command radius
+export const MESSENGER_RETREAT_SPEED_BONUS = 1.5;   // multiplier for retreat orders
+export const MESSENGER_RALLY_DELAY_MULTIPLIER = 2.0; // rally messengers move at half speed
+export const GENERAL_DEAD_MESSENGER_SPEED_MULT = 0.5;
+export const GENERAL_DEAD_MISINTERPRET_CHANCE = 0.15;
+export const RALLY_MORALE_THRESHOLD_OFFSET = 15;
+export const MESSENGER_TRAIL_INTERVAL_TICKS = 2;    // push trail pos every N ticks
+
+// --- Combat System (Step 8) ---
+export const MELEE_RANGE_TILES = 1;
+export const COMBAT_DETECT_INTERVAL_TICKS = 2;
+export const CAVALRY_CHARGE_BONUS_LIGHT = 2.0;
+export const CAVALRY_CHARGE_BONUS_HEAVY = 2.5;
+export const CAVALRY_CHARGE_MORALE_SHOCK = -8;
+export const SIEGE_AREA_RADIUS_TILES = 2;
+export const SIEGE_SETUP_TICKS = 100;
+export const DAO_SHIELD_ARROW_REDUCTION = 0.30;
+export const CROSSBOW_VOLLEY_RANKS = 3;
+export const FIRE_WHILE_MOVING_PENALTY = 0.30;
+export const COMBINE_THRESHOLD = 0.70;
+export const SPLIT_MORALE_PENALTY = 10;
+export const COMBAT_DISENGAGE_RANGE_MULT = 1.2;    // disengage if target moves beyond range*this
+export const MORALE_LOSS_PER_CASUALTY_PERCENT = -2;
+export const ROUT_CASCADE_RADIUS_TILES = 5;
+export const ROUT_CASCADE_MORALE_HIT = -10;
+export const ROUT_SPEED_MULTIPLIER = 1.5;
+export const ROUT_DAMAGE_TAKEN_MULT = 1.5;
+export const ROUT_NO_ORDERS_TICKS = 30;
+export const GENERAL_NEARBY_MORALE_PER_TICK = 1.0;
+
+// --- Order Effects (Steps 7-8) ---
+export const HOLD_DEFENSE_BONUS = 0.10;
+export const CHARGE_SPEED_MULT = 1.30;
+export const CHARGE_FATIGUE_PER_TICK = 2;
+export const FORM_UP_ARMOR_BONUS = 0.20;
+export const FORM_UP_SPEED_PENALTY = 0.30;
+export const FORM_UP_COMPLETION_TICKS = 3;
+export const DISENGAGE_SPEED_PENALTY = 0.20;
+export const DISENGAGE_PENALTY_TICKS = 5;

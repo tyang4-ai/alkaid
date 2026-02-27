@@ -7,6 +7,9 @@ import { RadialMenu } from './rendering/RadialMenu';
 import { DragArrowRenderer } from './rendering/DragArrowRenderer';
 import { DeploymentRenderer } from './rendering/DeploymentRenderer';
 import { DeploymentSidebar } from './rendering/DeploymentSidebar';
+import { MessengerRenderer } from './rendering/MessengerRenderer';
+import { CommandRadiusRenderer } from './rendering/CommandRadiusRenderer';
+import { CombatRenderer } from './rendering/CombatRenderer';
 import { GameLoop } from './core/GameLoop';
 import { GameState } from './simulation/GameState';
 import { TerrainGenerator } from './simulation/terrain/TerrainGenerator';
@@ -15,6 +18,9 @@ import { SelectionManager } from './simulation/SelectionManager';
 import { OrderManager } from './simulation/OrderManager';
 import { DeploymentManager } from './simulation/deployment/DeploymentManager';
 import { PathManager } from './simulation/pathfinding/PathManager';
+import { CommandSystem } from './simulation/command/CommandSystem';
+import { CombatSystem } from './simulation/combat/CombatSystem';
+import { MoraleSystem } from './simulation/combat/MoraleSystem';
 import { Camera } from './core/Camera';
 import { InputManager } from './core/InputManager';
 import { eventBus } from './core/EventBus';
@@ -58,6 +64,18 @@ async function main(): Promise<void> {
   // Pathfinding
   const pathManager = new PathManager(terrainGrid);
 
+  // Command System (Step 7)
+  const commandSystem = new CommandSystem();
+
+  // Combat System (Step 8)
+  const combatSystem = new CombatSystem(terrainGrid);
+  const moraleSystem = new MoraleSystem();
+
+  // Renderers for command + combat
+  const messengerRenderer = new MessengerRenderer(renderer.effectLayer);
+  const commandRadiusRenderer = new CommandRadiusRenderer(renderer.effectLayer);
+  const combatRenderer = new CombatRenderer(renderer.effectLayer);
+
   // Deployment
   const deploymentManager = new DeploymentManager();
   const deploymentRenderer = new DeploymentRenderer(renderer.effectLayer);
@@ -95,7 +113,7 @@ async function main(): Promise<void> {
     { type: UnitType.NU_CROSSBOWMEN, size: 100, experience: 0 },
     { type: UnitType.GONG_ARCHERS, size: 80, experience: 0 },
     { type: UnitType.LIGHT_CAVALRY, size: 40, experience: 0 },
-    { type: UnitType.ELITE_GUARD, size: 15, experience: 0, isGeneral: true },
+    { type: UnitType.GENERAL, size: 1, experience: 50, isGeneral: true },
   ];
 
   deploymentManager.startDeployment(startingRoster, terrainGrid, templateId);
@@ -112,8 +130,22 @@ async function main(): Promise<void> {
 
   gameLoop.onSimTick((dt) => {
     gameState.tick(dt);
+    const tick = gameState.getState().tickNumber;
+
+    // Update spatial hash before systems that use it
     pathManager.updateSpatialHash(unitManager.getAll());
-    pathManager.tick(gameState.getState().tickNumber);
+    pathManager.tick(tick);
+
+    // Command system: advance messengers, deliver orders
+    commandSystem.tick(tick, unitManager, orderManager, pathManager);
+
+    // Combat system: detection + damage processing
+    if (deploymentManager.phase === DeploymentPhase.BATTLE) {
+      combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem);
+      moraleSystem.tick(unitManager, orderManager);
+    }
+
+    // Unit movement + order effects
     unitManager.tick(dt, pathManager, orderManager);
     deploymentManager.tick(dt, unitManager);
   });
@@ -132,7 +164,16 @@ async function main(): Promise<void> {
       selectionManager, (id) => unitManager.get(id), alpha, frameDt,
       inputManager.boxSelectRect,
     );
-    orderRenderer.update(orderManager, selectionManager, (id) => unitManager.get(id), alpha);
+    orderRenderer.update(
+      orderManager, selectionManager, (id) => unitManager.get(id), alpha,
+      unitManager.getAll(), frameDt,
+    );
+
+    // Command + combat rendering
+    const playerGeneral = unitManager.getGeneral(0);
+    commandRadiusRenderer.update(playerGeneral, commandSystem.commandRadius, alpha);
+    messengerRenderer.update(commandSystem.getActiveMessengers(), alpha);
+    combatRenderer.update(combatSystem.getEngagedPairs(unitManager), alpha);
 
     // Right-drag arrow
     if (dragArrowRenderer.active) {
@@ -166,7 +207,11 @@ async function main(): Promise<void> {
 
   // --- Game state events ---
   eventBus.on('game:paused', () => gameState.setPaused(true));
-  eventBus.on('game:resumed', () => gameState.setPaused(false));
+  eventBus.on('game:resumed', () => {
+    gameState.setPaused(false);
+    // Flush queued orders on unpause
+    commandSystem.flushQueue(unitManager, gameState.getState().tickNumber);
+  });
   eventBus.on('speed:changed', ({ multiplier }) =>
     gameState.setSpeedMultiplier(multiplier),
   );
@@ -245,6 +290,16 @@ async function main(): Promise<void> {
     }
   });
 
+  // Helper to issue order through command system
+  function issueOrderViaCommand(unitId: number, orderType: OrderType, targetX: number, targetY: number): void {
+    const order = { type: orderType, unitId, targetX, targetY };
+    const unit = unitManager.get(unitId);
+    if (unit) {
+      unit.pendingOrderType = orderType;
+    }
+    commandSystem.issueOrder(order, unitManager, gameState.getState().paused);
+  }
+
   // --- Input: click ---
   eventBus.on('input:click', ({ worldX, worldY, screenX, screenY, shift }) => {
     // --- Deployment mode ---
@@ -303,19 +358,7 @@ async function main(): Promise<void> {
       const orderType = radialMenu.getOrderAtPoint(screenX, screenY);
       if (orderType !== -1) {
         for (const id of selectionManager.selectedIds) {
-          orderManager.setOrder(id, {
-            type: orderType, unitId: id,
-            targetX: radialMenu.worldX, targetY: radialMenu.worldY,
-          });
-          // Wire MOVE orders to pathfinding
-          if (orderType === OrderType.MOVE) {
-            const unit = unitManager.get(id);
-            if (unit) {
-              unit.targetX = radialMenu.worldX;
-              unit.targetY = radialMenu.worldY;
-              pathManager.requestPath(unit, radialMenu.worldX, radialMenu.worldY);
-            }
-          }
+          issueOrderViaCommand(id, orderType, radialMenu.worldX, radialMenu.worldY);
         }
       }
       radialMenu.hide();
@@ -360,7 +403,7 @@ async function main(): Promise<void> {
     }
   });
 
-  // --- Input: rightDrag (direct move order) ---
+  // --- Input: rightDrag (direct move order via command system) ---
   eventBus.on('input:rightDragStart', () => {
     if (deploymentManager.phase === DeploymentPhase.DEPLOYING) return;
     if (selectionManager.count > 0) {
@@ -379,16 +422,7 @@ async function main(): Promise<void> {
     if (selectionManager.count === 0) return;
 
     for (const id of selectionManager.selectedIds) {
-      orderManager.setOrder(id, {
-        type: OrderType.MOVE, unitId: id,
-        targetX: worldX, targetY: worldY,
-      });
-      const unit = unitManager.get(id);
-      if (unit) {
-        unit.targetX = worldX;
-        unit.targetY = worldY;
-        pathManager.requestPath(unit, worldX, worldY);
-      }
+      issueOrderViaCommand(id, OrderType.MOVE, worldX, worldY);
     }
   });
 
@@ -407,14 +441,15 @@ async function main(): Promise<void> {
     const spacing = 4;
     const blocked = new Set([TerrainType.WATER, TerrainType.MOUNTAINS, TerrainType.RIVER]);
 
-    const enemySquads: UnitType[] = [
-      UnitType.JI_HALBERDIERS,
-      UnitType.JI_HALBERDIERS,
-      UnitType.HEAVY_CAVALRY,
-      UnitType.NU_CROSSBOWMEN,
-      UnitType.HORSE_ARCHERS,
-      UnitType.GONG_ARCHERS,
-      UnitType.ELITE_GUARD,
+    const enemySquads: Array<{ type: UnitType; isGeneral?: boolean }> = [
+      { type: UnitType.JI_HALBERDIERS },
+      { type: UnitType.JI_HALBERDIERS },
+      { type: UnitType.HEAVY_CAVALRY },
+      { type: UnitType.NU_CROSSBOWMEN },
+      { type: UnitType.HORSE_ARCHERS },
+      { type: UnitType.GONG_ARCHERS },
+      { type: UnitType.ELITE_GUARD },
+      { type: UnitType.GENERAL, isGeneral: true },
     ];
 
     const startRow = centerRow - Math.floor((enemySquads.length - 1) / 2) * spacing;
@@ -422,7 +457,13 @@ async function main(): Promise<void> {
     for (let i = 0; i < enemySquads.length; i++) {
       const row = startRow + i * spacing;
       const pos = findValidPos(terrainGrid.width, terrainGrid.height, enemyCol, row, blocked);
-      um.spawn({ type: enemySquads[i], team: 1, x: pos.x, y: pos.y });
+      um.spawn({
+        type: enemySquads[i].type,
+        team: 1,
+        x: pos.x,
+        y: pos.y,
+        isGeneral: enemySquads[i].isGeneral,
+      });
     }
   }
 
@@ -457,8 +498,9 @@ async function main(): Promise<void> {
     unitManager, unitRenderer,
     selectionManager, orderManager,
     selectionRenderer, orderRenderer, radialMenu,
-    pathManager,
+    pathManager, commandSystem, combatSystem, moraleSystem,
     deploymentManager, deploymentRenderer, deploymentSidebar, dragArrowRenderer,
+    messengerRenderer, commandRadiusRenderer, combatRenderer,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),
@@ -478,7 +520,7 @@ async function main(): Promise<void> {
   console.log('DEPLOYMENT PHASE: Drag units from sidebar to deployment zone');
   console.log('Right-click placed units to remove them');
   console.log('Select a formation, then click Begin Battle');
-  console.log('Debug: __alkaid.deploymentManager.phase');
+  console.log('Debug: __alkaid.commandSystem, __alkaid.combatSystem, __alkaid.moraleSystem');
 
   gameLoop.start();
   gameLoop.pause(); // Start paused for deployment

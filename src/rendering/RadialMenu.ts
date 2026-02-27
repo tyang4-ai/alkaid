@@ -9,6 +9,7 @@ import {
 const ORDER_TYPES: OrderType[] = [
   OrderType.MOVE, OrderType.ATTACK, OrderType.HOLD, OrderType.RETREAT,
   OrderType.FLANK, OrderType.CHARGE, OrderType.FORM_UP, OrderType.DISENGAGE,
+  OrderType.RALLY,
 ];
 const WEDGE_COUNT = ORDER_TYPES.length;
 const WEDGE_ANGLE = (Math.PI * 2) / WEDGE_COUNT;

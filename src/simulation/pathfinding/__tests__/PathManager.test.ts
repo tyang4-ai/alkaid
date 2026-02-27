@@ -31,6 +31,10 @@ function makeUnit(id: number, type: UnitType, x: number, y: number): Unit {
     morale: 70, fatigue: 0, supply: 100, experience: 0,
     state: UnitState.IDLE, facing: 0,
     path: null, pathIndex: 0, targetX: x, targetY: y,
+    isGeneral: false, pendingOrderType: null, pendingOrderTick: 0,
+    attackCooldown: 0, lastAttackTick: 0, hasCharged: false,
+    combatTargetId: -1, combatTicks: 0, siegeSetupTicks: 0,
+    formUpTicks: 0, disengageTicks: 0, orderModifier: null, routTicks: 0,
   };
 }
 

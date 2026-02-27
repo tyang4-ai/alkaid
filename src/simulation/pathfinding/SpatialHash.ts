@@ -70,7 +70,7 @@ export class SpatialHash {
     return result;
   }
 
-  /** Get all unit IDs within a radius (post-filter by distance). */
+  /** Get all unit IDs within a radius (post-filter by distance). Uses 9-cell neighborhood. */
   queryRadius(x: number, y: number, radius: number, positions: Map<number, { x: number; y: number }>): number[] {
     const r2 = radius * radius;
     const candidates = this.queryNear(x, y);
@@ -83,6 +83,33 @@ export class SpatialHash {
       const dy = pos.y - y;
       if (dx * dx + dy * dy <= r2) {
         result.push(id);
+      }
+    }
+    return result;
+  }
+
+  /** Get all unit IDs within a wide radius — queries ceil(radius/cellSize) cells in each direction. */
+  queryRadiusWide(x: number, y: number, radius: number, positions: Map<number, { x: number; y: number }>): number[] {
+    const r2 = radius * radius;
+    const cx = Math.floor(x / this.cellSize);
+    const cy = Math.floor(y / this.cellSize);
+    const cellRadius = Math.ceil(radius / this.cellSize);
+    const result: number[] = [];
+
+    for (let dy = -cellRadius; dy <= cellRadius; dy++) {
+      for (let dx = -cellRadius; dx <= cellRadius; dx++) {
+        const k = this.key(cx + dx, cy + dy);
+        const cell = this.cells.get(k);
+        if (!cell) continue;
+        for (const id of cell) {
+          const pos = positions.get(id);
+          if (!pos) continue;
+          const ddx = pos.x - x;
+          const ddy = pos.y - y;
+          if (ddx * ddx + ddy * ddy <= r2) {
+            result.push(id);
+          }
+        }
       }
     }
     return result;

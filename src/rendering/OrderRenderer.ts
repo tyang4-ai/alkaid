@@ -10,6 +10,7 @@ import {
 
 export class OrderRenderer {
   private graphics: Graphics;
+  private pulseTime = 0;
 
   constructor(worldLayer: Container) {
     this.graphics = new Graphics();
@@ -21,8 +22,11 @@ export class OrderRenderer {
     selectionManager: SelectionManager,
     getUnit: (id: number) => Unit | undefined,
     alpha: number,
+    allUnits?: IterableIterator<Unit>,
+    frameDt?: number,
   ): void {
     this.graphics.clear();
+    if (frameDt) this.pulseTime += frameDt * 0.004;
 
     for (const id of selectionManager.selectedIds) {
       const order = orderManager.getOrder(id);
@@ -39,6 +43,21 @@ export class OrderRenderer {
 
       this.drawDashedLine(ux, uy, tx, ty, color);
       this.drawFlag(tx, ty, color);
+    }
+
+    // Draw pending order indicators for all units with pending orders
+    if (allUnits) {
+      const pulseAlpha = 0.4 + 0.4 * Math.sin(this.pulseTime);
+      for (const unit of allUnits) {
+        if (unit.pendingOrderType === null || unit.state === 5) continue;
+        const ux = unit.prevX + (unit.x - unit.prevX) * alpha;
+        const uy = unit.prevY + (unit.y - unit.prevY) * alpha;
+        const color = ORDER_DISPLAY[unit.pendingOrderType]?.color ?? 0xFFFFFF;
+
+        // Pulsing dot above unit
+        this.graphics.circle(ux, uy - 12, 3);
+        this.graphics.fill({ color, alpha: pulseAlpha });
+      }
     }
   }
 
