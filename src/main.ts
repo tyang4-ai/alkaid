@@ -10,7 +10,9 @@ import { DeploymentSidebar } from './rendering/DeploymentSidebar';
 import { MessengerRenderer } from './rendering/MessengerRenderer';
 import { CommandRadiusRenderer } from './rendering/CommandRadiusRenderer';
 import { CombatRenderer } from './rendering/CombatRenderer';
+import { UnitInfoPanel } from './rendering/UnitInfoPanel';
 import { EnvironmentHUD } from './rendering/EnvironmentHUD';
+import { BattleEndOverlay, type BattleResult } from './rendering/BattleEndOverlay';
 import { GameLoop } from './core/GameLoop';
 import { GameState } from './simulation/GameState';
 import { TerrainGenerator } from './simulation/terrain/TerrainGenerator';
@@ -22,16 +24,20 @@ import { PathManager } from './simulation/pathfinding/PathManager';
 import { CommandSystem } from './simulation/command/CommandSystem';
 import { CombatSystem } from './simulation/combat/CombatSystem';
 import { MoraleSystem } from './simulation/combat/MoraleSystem';
+import { FatigueSystem } from './simulation/metrics/FatigueSystem';
+import { SupplySystem } from './simulation/metrics/SupplySystem';
+import { ExperienceSystem } from './simulation/metrics/ExperienceSystem';
 import { WeatherSystem } from './simulation/environment/WeatherSystem';
 import { TimeOfDaySystem } from './simulation/environment/TimeOfDaySystem';
 import type { EnvironmentState } from './simulation/environment/EnvironmentState';
+import { SurrenderSystem } from './simulation/combat/SurrenderSystem';
 import { Camera } from './core/Camera';
 import { InputManager } from './core/InputManager';
 import { eventBus } from './core/EventBus';
 import {
   DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, TILE_SIZE,
-  UnitType, DeploymentPhase, TerrainType, OrderType,
-  CAMERA_DRAG_DEAD_ZONE, TimeOfDay,
+  UnitType, UnitState, DeploymentPhase, TerrainType, OrderType,
+  VictoryType, CAMERA_DRAG_DEAD_ZONE, TimeOfDay,
 } from './constants';
 import type { FormationType } from './constants';
 
@@ -75,11 +81,25 @@ async function main(): Promise<void> {
   const combatSystem = new CombatSystem(terrainGrid);
   const moraleSystem = new MoraleSystem();
 
+  // Metrics Systems (Step 9a)
+  const fatigueSystem = new FatigueSystem(terrainGrid);
+  const supplySystem = new SupplySystem(terrainGrid);
+  const experienceSystem = new ExperienceSystem();
+
+  // Unit Info Panel (Step 9a)
+  const unitInfoPanel = new UnitInfoPanel(container);
+
   // Environment Systems (Step 9b)
   const weatherSystem = new WeatherSystem(seed);
   const timeOfDaySystem = new TimeOfDaySystem(TimeOfDay.DAWN);
   const environmentHUD = new EnvironmentHUD(container);
   let environmentState: EnvironmentState | null = null;
+
+  // Surrender System (Step 9c)
+  const surrenderSystem = new SurrenderSystem();
+  const battleEndOverlay = new BattleEndOverlay(container);
+  let battleStartTick = 0;
+  let battleEnded = false;
 
   // Renderers for command + combat
   const messengerRenderer = new MessengerRenderer(renderer.effectLayer);
@@ -149,7 +169,7 @@ async function main(): Promise<void> {
     // Command system: advance messengers, deliver orders
     commandSystem.tick(tick, unitManager, orderManager, pathManager);
 
-    // Combat system: detection + damage processing
+    // Battle-phase systems
     if (deploymentManager.phase === DeploymentPhase.BATTLE) {
       // Environment systems first (Step 9b)
       if (environmentState) {
@@ -158,8 +178,29 @@ async function main(): Promise<void> {
         timeOfDaySystem.tick(environmentState);
       }
 
-      combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem, undefined, environmentState ?? undefined);
-      moraleSystem.tick(unitManager, orderManager, undefined, undefined, environmentState ?? undefined);
+      supplySystem.tick(unitManager, environmentState ?? undefined);
+      fatigueSystem.tick(unitManager, orderManager, supplySystem.getAllFoodPercents(), environmentState ?? undefined);
+      combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem, supplySystem.getAllFoodPercents(), environmentState ?? undefined);
+      experienceSystem.tick(unitManager);
+      moraleSystem.tick(unitManager, orderManager, supplySystem.getAllFoodPercents(), terrainGrid, environmentState ?? undefined);
+
+      // Surrender check (after morale, before unitManager.tick)
+      if (!battleEnded) {
+        surrenderSystem.tick(tick, unitManager, supplySystem);
+
+        // Annihilation check: all enemy units dead
+        for (const checkTeam of [0, 1]) {
+          const aliveUnits = unitManager.getByTeam(checkTeam)
+            .filter(u => u.state !== UnitState.DEAD);
+          if (aliveUnits.length === 0) {
+            const winnerTeam = checkTeam === 0 ? 1 : 0;
+            eventBus.emit('battle:ended', {
+              winnerTeam,
+              victoryType: VictoryType.ANNIHILATION,
+            });
+          }
+        }
+      }
     }
 
     // Unit movement + order effects
@@ -221,6 +262,8 @@ async function main(): Promise<void> {
 
     const mousePos = inputManager.getMouseScreenPos();
     radialMenu.updateHover(mousePos.x, mousePos.y);
+    // Unit Info Panel (updates every frame for live stat bars)
+    unitInfoPanel.update(selectionManager, unitManager);
     renderer.updateFPS(gameLoop.currentFPS, gameLoop.currentTick, unitManager.count);
     renderer.render(alpha);
   });
@@ -253,6 +296,10 @@ async function main(): Promise<void> {
     gameLoop.resume();
     spawnEnemyArmy(unitManager);
 
+    // Initialize supply for both armies
+    supplySystem.initArmy(0, 100, 100);
+    supplySystem.initArmy(1, 100, 100);
+
     // Initialize environment (Step 9b)
     const initialWeather = weatherSystem.getInitialWeather();
     environmentState = {
@@ -262,6 +309,80 @@ async function main(): Promise<void> {
       currentTick: 0,
       battleStartTime: TimeOfDay.DAWN,
     };
+
+    // Initialize surrender tracking (Step 9c)
+    surrenderSystem.initBattle(unitManager);
+    battleStartTick = gameState.getState().tickNumber;
+    battleEnded = false;
+  });
+
+  // --- Battle end handler (Step 9c) ---
+  eventBus.on('battle:ended', ({ winnerTeam, victoryType }) => {
+    if (battleEnded) return;
+    battleEnded = true;
+
+    // Compute battle result
+    const playerAlive = unitManager.getByTeam(0).filter(u => u.state !== UnitState.DEAD);
+    const enemyAlive = unitManager.getByTeam(1).filter(u => u.state !== UnitState.DEAD);
+    let playerCurrent = 0, enemyCurrent = 0;
+    for (const u of playerAlive) playerCurrent += u.size;
+    for (const u of enemyAlive) enemyCurrent += u.size;
+
+    // Estimate starting from maxSize (approximate)
+    let playerStarting = 0, enemyStarting = 0;
+    for (const u of unitManager.getByTeam(0)) {
+      playerStarting += u.maxSize;
+    }
+    for (const u of unitManager.getByTeam(1)) {
+      enemyStarting += u.maxSize;
+    }
+
+    const result: BattleResult = {
+      winnerTeam,
+      playerTeam: 0,
+      victoryType,
+      playerCasualties: playerStarting - playerCurrent,
+      playerStarting,
+      enemyCasualties: enemyStarting - enemyCurrent,
+      enemyStarting,
+      durationTicks: gameState.getState().tickNumber - battleStartTick,
+    };
+
+    battleEndOverlay.show(result);
+    gameLoop.pause();
+  });
+
+  // --- General killed → army-wide morale hit + victory condition ---
+  eventBus.on('combat:unitDestroyed', ({ unitId }) => {
+    const unit = unitManager.get(unitId);
+    if (unit?.isGeneral) {
+      moraleSystem.applyGeneralKilled(unit.team, unitManager);
+      // General killed victory condition (Step 9c)
+      if (!battleEnded) {
+        const winnerTeam = unit.team === 0 ? 1 : 0;
+        eventBus.emit('battle:ended', {
+          winnerTeam,
+          victoryType: VictoryType.GENERAL_KILLED,
+        });
+      }
+    }
+  });
+
+  // --- Unit routed → winning engagement morale boost ---
+  eventBus.on('unit:routed', ({ unitId }) => {
+    const routedUnit = unitManager.get(unitId);
+    if (routedUnit) {
+      moraleSystem.applyWinningEngagement(unitManager, routedUnit);
+    }
+  });
+
+  // --- Supply collapse → set morale to 0 for all alive units of that team ---
+  eventBus.on('supply:collapse', ({ team }) => {
+    for (const unit of unitManager.getByTeam(team)) {
+      if (unit.state !== UnitState.DEAD) {
+        unit.morale = 0;
+      }
+    }
   });
 
   // --- Mouse tracking for drag ---
@@ -531,7 +652,9 @@ async function main(): Promise<void> {
     pathManager, commandSystem, combatSystem, moraleSystem,
     deploymentManager, deploymentRenderer, deploymentSidebar, dragArrowRenderer,
     messengerRenderer, commandRadiusRenderer, combatRenderer,
+    fatigueSystem, supplySystem, experienceSystem,
     weatherSystem, timeOfDaySystem, environmentHUD, environmentState,
+    surrenderSystem, battleEndOverlay,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),

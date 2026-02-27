@@ -17,6 +17,7 @@ function makeUnit(type: UnitType, overrides: Partial<Unit> = {}): Unit {
     attackCooldown: 0, lastAttackTick: 0, hasCharged: false,
     combatTargetId: -1, combatTicks: 0, siegeSetupTicks: 0,
     formUpTicks: 0, disengageTicks: 0, orderModifier: null, routTicks: 0,
+    killCount: 0, holdUnderBombardmentTicks: 0, desertionFrac: 0,
     ...overrides,
   };
 }

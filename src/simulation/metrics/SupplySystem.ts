@@ -42,6 +42,14 @@ export class SupplySystem {
     });
   }
 
+  /** Set food directly (for testing / scripted scenarios). */
+  setFood(team: number, food: number): void {
+    const army = this.armies.get(team);
+    if (army) {
+      army.food = Math.max(0, Math.min(army.maxFood, food));
+    }
+  }
+
   getFoodPercent(team: number): number {
     const army = this.armies.get(team);
     if (!army || army.maxFood === 0) return 0;

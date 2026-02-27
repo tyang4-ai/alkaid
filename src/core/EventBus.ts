@@ -59,6 +59,10 @@ export interface GameEvents {
   // Environment system (Step 9b)
   'weather:changed': { oldWeather: number; newWeather: number; tick: number };
   'time:phaseChanged': { oldPhase: number; newPhase: number; tick: number };
+
+  // Surrender/battle end (Step 9c)
+  'battle:surrender': { team: number; pressure: number; victoryType: number; factors: { morale: number; casualty: number; supply: number; encirclement: number; leadership: number } };
+  'battle:ended': { winnerTeam: number; victoryType: number };
 }
 
 type EventKey = keyof GameEvents;

@@ -7,6 +7,8 @@ import {
   DISENGAGE_SPEED_PENALTY, DISENGAGE_PENALTY_TICKS,
   ROUT_SPEED_MULTIPLIER,
 } from '../../constants';
+import { FatigueSystem } from '../metrics/FatigueSystem';
+import { SupplySystem } from '../metrics/SupplySystem';
 import { eventBus } from '../../core/EventBus';
 import type { PathManager } from '../pathfinding/PathManager';
 import type { OrderManager } from '../OrderManager';
@@ -206,6 +208,10 @@ export class UnitManager {
       if (order.type === OrderType.CHARGE) speedMult = CHARGE_SPEED_MULT;
       if (unit.disengageTicks > 0) speedMult *= (1.0 - DISENGAGE_SPEED_PENALTY);
 
+      // Fatigue + supply speed penalties (Step 9a)
+      speedMult *= FatigueSystem.getSpeedMultiplier(unit.fatigue);
+      speedMult *= SupplySystem.getSpeedMultiplier(unit.supply);
+
       this.moveUnit(unit, order, pathManager, speedMult);
     }
   }
@@ -243,7 +249,9 @@ export class UnitManager {
   private moveRouting(unit: Unit): void {
     // Flee toward nearest map edge
     const config = UNIT_TYPE_CONFIGS[unit.type];
-    const speed = (config.speed * ROUT_SPEED_MULTIPLIER * TILE_SIZE) / SIM_TICK_RATE;
+    const fatigueMult = FatigueSystem.getSpeedMultiplier(unit.fatigue);
+    const supplyMult = SupplySystem.getSpeedMultiplier(unit.supply);
+    const speed = (config.speed * ROUT_SPEED_MULTIPLIER * fatigueMult * supplyMult * TILE_SIZE) / SIM_TICK_RATE;
 
     // Find nearest edge direction
     // Use facing as flee direction (already set when rout triggered)
