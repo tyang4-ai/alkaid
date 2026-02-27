@@ -279,3 +279,53 @@ export const UNIT_TYPE_SHAPE: Record<UnitType, number> = {
   [UnitType.LOU_CHUAN]: UNIT_SHAPE.HEXAGON,
   [UnitType.FIRE_SHIPS]: UNIT_SHAPE.HEXAGON,
 };
+
+// --- Selection (Step 5) ---
+export const SELECTION_CLICK_RADIUS = 12;
+export const SELECTION_RING_RADIUS_PAD = 4;
+export const SELECTION_RING_COLOR = 0xFFD700;
+export const SELECTION_RING_WIDTH = 1.5;
+export const SELECTION_RING_PULSE_SPEED = 3.0;
+export const SELECTION_RING_ALPHA_MIN = 0.4;
+export const SELECTION_RING_ALPHA_MAX = 1.0;
+export const SELECTION_BOX_FILL_COLOR = 0xFFFFFF;
+export const SELECTION_BOX_FILL_ALPHA = 0.1;
+export const SELECTION_BOX_STROKE_COLOR = 0xFFD700;
+export const SELECTION_BOX_STROKE_ALPHA = 0.6;
+
+// --- Orders (Step 5) ---
+export const OrderType = {
+  MOVE: 0,
+  ATTACK: 1,
+  HOLD: 2,
+  RETREAT: 3,
+  FLANK: 4,
+  CHARGE: 5,
+  FORM_UP: 6,
+  DISENGAGE: 7,
+} as const;
+export type OrderType = (typeof OrderType)[keyof typeof OrderType];
+
+export const ORDER_DISPLAY: Record<OrderType, { label: string; chinese: string; color: number }> = {
+  [OrderType.MOVE]:       { label: 'Move',       chinese: '移动', color: 0xFFFFFF },
+  [OrderType.ATTACK]:     { label: 'Attack',     chinese: '攻击', color: 0xCC3333 },
+  [OrderType.HOLD]:       { label: 'Hold',       chinese: '驻守', color: 0x33AA33 },
+  [OrderType.RETREAT]:    { label: 'Retreat',     chinese: '撤退', color: 0xAAAA33 },
+  [OrderType.FLANK]:      { label: 'Flank',      chinese: '侧击', color: 0xCC8833 },
+  [OrderType.CHARGE]:     { label: 'Charge',     chinese: '冲锋', color: 0xDD4444 },
+  [OrderType.FORM_UP]:    { label: 'Form Up',    chinese: '列阵', color: 0x4488CC },
+  [OrderType.DISENGAGE]:  { label: 'Disengage',  chinese: '脱离', color: 0x888888 },
+};
+
+export const ORDER_LINE_DASH = 4;
+export const ORDER_LINE_GAP = 4;
+export const ORDER_LINE_WIDTH = 1.5;
+export const ORDER_LINE_ALPHA = 0.6;
+export const ORDER_FLAG_SIZE = 6;
+
+export const RADIAL_MENU_RADIUS = 80;
+export const RADIAL_MENU_INNER_RADIUS = 25;
+export const RADIAL_MENU_WEDGE_COLOR = 0x1A1A2E;
+export const RADIAL_MENU_HOVER_COLOR = 0x2A2A4E;
+export const RADIAL_MENU_BORDER_COLOR = 0x555555;
+export const RADIAL_MENU_FONT_SIZE = 11;

@@ -10,6 +10,12 @@ export interface GameEvents {
   'unit:spawned': { id: number; type: number; team: number };
   'unit:destroyed': { id: number };
   'units:cleared': undefined;
+  'selection:changed': { ids: number[] };
+  'input:click': { worldX: number; worldY: number; screenX: number; screenY: number; shift: boolean };
+  'input:boxSelect': { x1: number; y1: number; x2: number; y2: number };
+  'input:rightClick': { worldX: number; worldY: number; screenX: number; screenY: number };
+  'order:issued': { unitId: number; type: number };
+  'order:cleared': { unitId: number };
 }
 
 type EventKey = keyof GameEvents;

@@ -1,4 +1,5 @@
 import { Camera } from './Camera';
+import { eventBus } from './EventBus';
 import {
   CAMERA_PAN_SPEED,
   CAMERA_EDGE_SCROLL_ZONE,
@@ -6,9 +7,6 @@ import {
   CAMERA_DRAG_DEAD_ZONE,
 } from '../constants';
 
-/**
- * DOM event handler. Binds keyboard/mouse/wheel events, calls Camera methods.
- */
 export class InputManager {
   private camera: Camera;
   private canvas: HTMLCanvasElement;
@@ -28,6 +26,12 @@ export class InputManager {
   private leftDragLastX = 0;
   private leftDragLastY = 0;
 
+  // Ctrl+drag box-select state
+  private ctrlBoxSelecting = false;
+  private boxStartScreenX = 0;
+  private boxStartScreenY = 0;
+  private _boxRect: { x1: number; y1: number; x2: number; y2: number } | null = null;
+
   // Bound handlers for removal
   private handleKeyDown: (e: KeyboardEvent) => void;
   private handleKeyUp: (e: KeyboardEvent) => void;
@@ -43,7 +47,6 @@ export class InputManager {
     this.camera = camera;
     this.canvas = canvas;
 
-    // Bind all handlers
     this.handleKeyDown = this.onKeyDown.bind(this);
     this.handleKeyUp = this.onKeyUp.bind(this);
     this.handleMouseMove = this.onMouseMove.bind(this);
@@ -52,7 +55,11 @@ export class InputManager {
     this.handleWheel = this.onWheel.bind(this);
     this.handleContextMenu = (e: Event) => e.preventDefault();
     this.handleResize = this.onResize.bind(this);
-    this.handleBlur = () => this.keysDown.clear();
+    this.handleBlur = () => {
+      this.keysDown.clear();
+      this.ctrlBoxSelecting = false;
+      this._boxRect = null;
+    };
 
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
@@ -65,18 +72,15 @@ export class InputManager {
     window.addEventListener('blur', this.handleBlur);
   }
 
-  /** Called every render frame. Handles keyboard + edge scroll panning. */
   update(dtMs: number): void {
     let dx = 0;
     let dy = 0;
 
-    // WASD / arrow keys
     if (this.keysDown.has('KeyW') || this.keysDown.has('ArrowUp')) dy -= 1;
     if (this.keysDown.has('KeyS') || this.keysDown.has('ArrowDown')) dy += 1;
     if (this.keysDown.has('KeyA') || this.keysDown.has('ArrowLeft')) dx -= 1;
     if (this.keysDown.has('KeyD') || this.keysDown.has('ArrowRight')) dx += 1;
 
-    // Edge scrolling
     const vw = this.camera.viewportWidth;
     const vh = this.camera.viewportHeight;
     const zone = CAMERA_EDGE_SCROLL_ZONE;
@@ -86,7 +90,6 @@ export class InputManager {
     if (this._mouseY < zone) dy -= 1;
     if (this._mouseY > vh - zone) dy += 1;
 
-    // Normalize diagonal to unit length
     if (dx !== 0 && dy !== 0) {
       const len = Math.sqrt(dx * dx + dy * dy);
       dx /= len;
@@ -95,15 +98,12 @@ export class InputManager {
 
     if (dx !== 0 || dy !== 0) {
       const speed = CAMERA_PAN_SPEED * (dtMs / 1000);
-      // Speed scales inversely with zoom so panning feels consistent
       this.camera.pan(
         dx * speed / this.camera.zoom,
         dy * speed / this.camera.zoom,
       );
     }
   }
-
-  // --- Public utilities ---
 
   isKeyDown(code: string): boolean {
     return this.keysDown.has(code);
@@ -113,9 +113,12 @@ export class InputManager {
     return { x: this._mouseX, y: this._mouseY };
   }
 
-  /** True when the user is actively left-click dragging (past dead zone). */
   get isDragging(): boolean {
     return this.leftDragging;
+  }
+
+  get boxSelectRect() {
+    return this._boxRect;
   }
 
   destroy(): void {
@@ -130,17 +133,19 @@ export class InputManager {
     window.removeEventListener('blur', this.handleBlur);
   }
 
-  // --- Private event handlers ---
-
   private static readonly GAME_KEYS = new Set([
     'KeyW', 'KeyA', 'KeyS', 'KeyD',
     'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-    'Space',
+    'Space', 'Escape',
   ]);
 
   private onKeyDown(e: KeyboardEvent): void {
     if (InputManager.GAME_KEYS.has(e.code)) e.preventDefault();
     this.keysDown.add(e.code);
+
+    if (e.code === 'Escape') {
+      eventBus.emit('selection:changed', { ids: [] });
+    }
   }
 
   private onKeyUp(e: KeyboardEvent): void {
@@ -161,35 +166,57 @@ export class InputManager {
       this.dragLastY = e.clientY;
     }
 
-    // Left-click drag (with dead zone)
+    // Left-click drag
     if (this.leftButtonDown) {
-      if (!this.leftDragging) {
-        const dx = e.clientX - this.leftDownX;
-        const dy = e.clientY - this.leftDownY;
-        if (dx * dx + dy * dy > CAMERA_DRAG_DEAD_ZONE * CAMERA_DRAG_DEAD_ZONE) {
-          this.leftDragging = true;
+      const dx = e.clientX - this.leftDownX;
+      const dy = e.clientY - this.leftDownY;
+      const pastDeadZone = dx * dx + dy * dy > CAMERA_DRAG_DEAD_ZONE * CAMERA_DRAG_DEAD_ZONE;
+
+      if (this.ctrlBoxSelecting) {
+        // Box-select mode: update screen-space rect for renderer
+        if (pastDeadZone) {
+          this._boxRect = {
+            x1: this.boxStartScreenX,
+            y1: this.boxStartScreenY,
+            x2: this._mouseX,
+            y2: this._mouseY,
+          };
+        }
+      } else {
+        // Camera pan mode
+        if (!this.leftDragging) {
+          if (pastDeadZone) {
+            this.leftDragging = true;
+            this.leftDragLastX = e.clientX;
+            this.leftDragLastY = e.clientY;
+          }
+        } else {
+          const moveDx = e.clientX - this.leftDragLastX;
+          const moveDy = e.clientY - this.leftDragLastY;
+          this.camera.pan(-moveDx / this.camera.zoom, -moveDy / this.camera.zoom);
           this.leftDragLastX = e.clientX;
           this.leftDragLastY = e.clientY;
         }
-      } else {
-        const dx = e.clientX - this.leftDragLastX;
-        const dy = e.clientY - this.leftDragLastY;
-        this.camera.pan(-dx / this.camera.zoom, -dy / this.camera.zoom);
-        this.leftDragLastX = e.clientX;
-        this.leftDragLastY = e.clientY;
       }
     }
   }
 
   private onMouseDown(e: MouseEvent): void {
     if (e.button === 0) {
-      // Left click — start potential drag
       this.leftButtonDown = true;
       this.leftDragging = false;
       this.leftDownX = e.clientX;
       this.leftDownY = e.clientY;
+
+      if (e.ctrlKey) {
+        this.ctrlBoxSelecting = true;
+        const rect = this.canvas.getBoundingClientRect();
+        this.boxStartScreenX = e.clientX - rect.left;
+        this.boxStartScreenY = e.clientY - rect.top;
+      } else {
+        this.ctrlBoxSelecting = false;
+      }
     } else if (e.button === 1) {
-      // Middle click
       this.middleButtonDown = true;
       this.dragLastX = e.clientX;
       this.dragLastY = e.clientY;
@@ -199,11 +226,43 @@ export class InputManager {
 
   private onMouseUp(e: MouseEvent): void {
     if (e.button === 0) {
-      // TODO Step 5: if !leftDragging, this was a click — handle unit selection
+      if (this.ctrlBoxSelecting && this._boxRect) {
+        // Box-select complete: convert screen rect to world coords
+        const topLeft = this.camera.screenToWorld(this._boxRect.x1, this._boxRect.y1);
+        const bottomRight = this.camera.screenToWorld(this._boxRect.x2, this._boxRect.y2);
+        eventBus.emit('input:boxSelect', {
+          x1: topLeft.x, y1: topLeft.y,
+          x2: bottomRight.x, y2: bottomRight.y,
+        });
+      } else if (!this.leftDragging && !this.ctrlBoxSelecting) {
+        // Click (no drag): emit click event
+        const rect = this.canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const world = this.camera.screenToWorld(screenX, screenY);
+        eventBus.emit('input:click', {
+          worldX: world.x, worldY: world.y,
+          screenX, screenY,
+          shift: e.shiftKey,
+        });
+      }
+
       this.leftButtonDown = false;
       this.leftDragging = false;
+      this.ctrlBoxSelecting = false;
+      this._boxRect = null;
     } else if (e.button === 1) {
       this.middleButtonDown = false;
+    } else if (e.button === 2) {
+      // Right-click: emit event with world coords
+      const rect = this.canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const world = this.camera.screenToWorld(screenX, screenY);
+      eventBus.emit('input:rightClick', {
+        worldX: world.x, worldY: world.y,
+        screenX, screenY,
+      });
     }
   }
 
