@@ -4,6 +4,7 @@ import { UnitRenderer } from './rendering/UnitRenderer';
 import { SelectionRenderer } from './rendering/SelectionRenderer';
 import { OrderRenderer } from './rendering/OrderRenderer';
 import { RadialMenu } from './rendering/RadialMenu';
+import { DragArrowRenderer } from './rendering/DragArrowRenderer';
 import { DeploymentRenderer } from './rendering/DeploymentRenderer';
 import { DeploymentSidebar } from './rendering/DeploymentSidebar';
 import { GameLoop } from './core/GameLoop';
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
   const orderManager = new OrderManager();
   const selectionRenderer = new SelectionRenderer(renderer.unitLayer, renderer.uiLayer);
   const orderRenderer = new OrderRenderer(renderer.effectLayer);
+  const dragArrowRenderer = new DragArrowRenderer(renderer.effectLayer);
   const radialMenu = new RadialMenu(renderer.uiLayer);
 
   // Pathfinding
@@ -79,6 +81,10 @@ async function main(): Promise<void> {
   let dragStartScreenY = 0;
   let mouseScreenX = 0;
   let mouseScreenY = 0;
+
+  // --- Right-drag arrow state ---
+  let rightDragWorldX = 0;
+  let rightDragWorldY = 0;
 
   // --- Start deployment ---
   const startingRoster = [
@@ -127,6 +133,22 @@ async function main(): Promise<void> {
       inputManager.boxSelectRect,
     );
     orderRenderer.update(orderManager, selectionManager, (id) => unitManager.get(id), alpha);
+
+    // Right-drag arrow
+    if (dragArrowRenderer.active) {
+      let cx = 0, cy = 0, count = 0;
+      for (const id of selectionManager.selectedIds) {
+        const u = unitManager.get(id);
+        if (u) {
+          cx += u.prevX + (u.x - u.prevX) * alpha;
+          cy += u.prevY + (u.y - u.prevY) * alpha;
+          count++;
+        }
+      }
+      if (count > 0) {
+        dragArrowRenderer.update(cx / count, cy / count, rightDragWorldX, rightDragWorldY);
+      }
+    }
 
     // Ghost during deployment drag
     if (deploymentManager.phase === DeploymentPhase.DEPLOYING && dragActive) {
@@ -338,6 +360,38 @@ async function main(): Promise<void> {
     }
   });
 
+  // --- Input: rightDrag (direct move order) ---
+  eventBus.on('input:rightDragStart', () => {
+    if (deploymentManager.phase === DeploymentPhase.DEPLOYING) return;
+    if (selectionManager.count > 0) {
+      dragArrowRenderer.show();
+    }
+  });
+
+  eventBus.on('input:rightDragMove', ({ worldX, worldY }) => {
+    rightDragWorldX = worldX;
+    rightDragWorldY = worldY;
+  });
+
+  eventBus.on('input:rightDragEnd', ({ worldX, worldY }) => {
+    if (deploymentManager.phase === DeploymentPhase.DEPLOYING) return;
+    dragArrowRenderer.hide();
+    if (selectionManager.count === 0) return;
+
+    for (const id of selectionManager.selectedIds) {
+      orderManager.setOrder(id, {
+        type: OrderType.MOVE, unitId: id,
+        targetX: worldX, targetY: worldY,
+      });
+      const unit = unitManager.get(id);
+      if (unit) {
+        unit.targetX = worldX;
+        unit.targetY = worldY;
+        pathManager.requestPath(unit, worldX, worldY);
+      }
+    }
+  });
+
   // ESC deselect
   eventBus.on('selection:changed', ({ ids }) => {
     if (ids.length === 0) {
@@ -404,7 +458,7 @@ async function main(): Promise<void> {
     selectionManager, orderManager,
     selectionRenderer, orderRenderer, radialMenu,
     pathManager,
-    deploymentManager, deploymentRenderer, deploymentSidebar,
+    deploymentManager, deploymentRenderer, deploymentSidebar, dragArrowRenderer,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),

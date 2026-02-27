@@ -27,6 +27,9 @@ export interface GameEvents {
   'path:requested': { unitId: number };
   'path:found': { unitId: number; length: number };
   'path:notFound': { unitId: number };
+  'input:rightDragStart': { worldX: number; worldY: number; screenX: number; screenY: number };
+  'input:rightDragMove': { worldX: number; worldY: number; screenX: number; screenY: number };
+  'input:rightDragEnd': { worldX: number; worldY: number; screenX: number; screenY: number };
 }
 
 type EventKey = keyof GameEvents;

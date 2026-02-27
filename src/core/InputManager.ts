@@ -28,6 +28,12 @@ export class InputManager {
   private leftDragLastX = 0;
   private leftDragLastY = 0;
 
+  // Right-click drag state
+  private rightButtonDown = false;
+  private rightDragging = false;
+  private rightDownX = 0;
+  private rightDownY = 0;
+
   // Ctrl+drag box-select state
   private ctrlBoxSelecting = false;
   private boxStartScreenX = 0;
@@ -168,6 +174,27 @@ export class InputManager {
       this.dragLastY = e.clientY;
     }
 
+    // Right-click drag
+    if (this.rightButtonDown) {
+      const rdx = e.clientX - this.rightDownX;
+      const rdy = e.clientY - this.rightDownY;
+      if (!this.rightDragging && rdx * rdx + rdy * rdy > CAMERA_DRAG_DEAD_ZONE * CAMERA_DRAG_DEAD_ZONE) {
+        this.rightDragging = true;
+        const world = this.camera.screenToWorld(this._mouseX, this._mouseY);
+        eventBus.emit('input:rightDragStart', {
+          worldX: world.x, worldY: world.y,
+          screenX: this._mouseX, screenY: this._mouseY,
+        });
+      }
+      if (this.rightDragging) {
+        const world = this.camera.screenToWorld(this._mouseX, this._mouseY);
+        eventBus.emit('input:rightDragMove', {
+          worldX: world.x, worldY: world.y,
+          screenX: this._mouseX, screenY: this._mouseY,
+        });
+      }
+    }
+
     // Left-click drag
     if (this.leftButtonDown) {
       const dx = e.clientX - this.leftDownX;
@@ -229,6 +256,11 @@ export class InputManager {
       this.dragLastX = e.clientX;
       this.dragLastY = e.clientY;
       e.preventDefault();
+    } else if (e.button === 2) {
+      this.rightButtonDown = true;
+      this.rightDragging = false;
+      this.rightDownX = e.clientX;
+      this.rightDownY = e.clientY;
     }
   }
 
@@ -262,15 +294,27 @@ export class InputManager {
     } else if (e.button === 1) {
       this.middleButtonDown = false;
     } else if (e.button === 2) {
-      // Right-click: emit event with world coords
       const rect = this.canvas.getBoundingClientRect();
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
       const world = this.camera.screenToWorld(screenX, screenY);
-      eventBus.emit('input:rightClick', {
-        worldX: world.x, worldY: world.y,
-        screenX, screenY,
-      });
+
+      if (this.rightDragging) {
+        // Right-drag end: emit drag end event
+        eventBus.emit('input:rightDragEnd', {
+          worldX: world.x, worldY: world.y,
+          screenX, screenY,
+        });
+      } else {
+        // Quick right-click (no drag): emit click event
+        eventBus.emit('input:rightClick', {
+          worldX: world.x, worldY: world.y,
+          screenX, screenY,
+        });
+      }
+
+      this.rightButtonDown = false;
+      this.rightDragging = false;
     }
   }
 
