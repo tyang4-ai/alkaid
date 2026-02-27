@@ -346,6 +346,7 @@ export const DeploymentPhase = {
   DEPLOYING: 1,
   COUNTDOWN: 2,
   BATTLE: 3,
+  POST_BATTLE: 4,
 } as const;
 export type DeploymentPhase = (typeof DeploymentPhase)[keyof typeof DeploymentPhase];
 
@@ -537,3 +538,24 @@ export const FORM_UP_SPEED_PENALTY = 0.30;
 export const FORM_UP_COMPLETION_TICKS = 3;
 export const DISENGAGE_SPEED_PENALTY = 0.20;
 export const DISENGAGE_PENALTY_TICKS = 5;
+
+// --- Surrender System (Step 9c) ---
+export const SURRENDER_CHECK_INTERVAL_TICKS = 10;
+export const SURRENDER_PRESSURE_THRESHOLD = 80;
+export const SURRENDER_CONSECUTIVE_CHECKS = 5;
+export const SURRENDER_WEIGHT_MORALE = 0.30;
+export const SURRENDER_WEIGHT_CASUALTY = 0.25;
+export const SURRENDER_WEIGHT_SUPPLY = 0.20;
+export const SURRENDER_WEIGHT_ENCIRCLEMENT = 0.15;
+export const SURRENDER_WEIGHT_LEADERSHIP = 0.10;
+export const ENCIRCLEMENT_QUADRANTS = 4;
+export const ENCIRCLEMENT_CHECK_RADIUS = 15;
+export const ENCIRCLEMENT_ENEMY_THRESHOLD = 3;
+
+export const VictoryType = {
+  SURRENDER: 0,
+  ANNIHILATION: 1,
+  GENERAL_KILLED: 2,
+  STARVATION: 3,
+} as const;
+export type VictoryType = (typeof VictoryType)[keyof typeof VictoryType];

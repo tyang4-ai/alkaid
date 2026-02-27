@@ -45,6 +45,10 @@ export interface GameEvents {
   'unit:rallied': { unitId: number };
   'unit:combined': { survivorId: number; absorbedId: number };
   'unit:split': { originalId: number; newId: number };
+
+  // Surrender/battle end (Step 9c)
+  'battle:surrender': { team: number; pressure: number; victoryType: number; factors: { morale: number; casualty: number; supply: number; encirclement: number; leadership: number } };
+  'battle:ended': { winnerTeam: number; victoryType: number };
 }
 
 type EventKey = keyof GameEvents;

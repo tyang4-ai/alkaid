@@ -10,6 +10,7 @@ import { DeploymentSidebar } from './rendering/DeploymentSidebar';
 import { MessengerRenderer } from './rendering/MessengerRenderer';
 import { CommandRadiusRenderer } from './rendering/CommandRadiusRenderer';
 import { CombatRenderer } from './rendering/CombatRenderer';
+import { BattleEndOverlay, type BattleResult } from './rendering/BattleEndOverlay';
 import { GameLoop } from './core/GameLoop';
 import { GameState } from './simulation/GameState';
 import { TerrainGenerator } from './simulation/terrain/TerrainGenerator';
@@ -21,13 +22,15 @@ import { PathManager } from './simulation/pathfinding/PathManager';
 import { CommandSystem } from './simulation/command/CommandSystem';
 import { CombatSystem } from './simulation/combat/CombatSystem';
 import { MoraleSystem } from './simulation/combat/MoraleSystem';
+import { SurrenderSystem } from './simulation/combat/SurrenderSystem';
+import { SupplySystem } from './simulation/metrics/SupplySystem';
 import { Camera } from './core/Camera';
 import { InputManager } from './core/InputManager';
 import { eventBus } from './core/EventBus';
 import {
   DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, TILE_SIZE,
-  UnitType, DeploymentPhase, TerrainType, OrderType,
-  CAMERA_DRAG_DEAD_ZONE,
+  UnitType, UnitState, DeploymentPhase, TerrainType, OrderType,
+  VictoryType, CAMERA_DRAG_DEAD_ZONE,
 } from './constants';
 import type { FormationType } from './constants';
 
@@ -70,6 +73,15 @@ async function main(): Promise<void> {
   // Combat System (Step 8)
   const combatSystem = new CombatSystem(terrainGrid);
   const moraleSystem = new MoraleSystem();
+
+  // Supply System (Step 9c stub, expanded in Step 10)
+  const supplySystem = new SupplySystem();
+
+  // Surrender System (Step 9c)
+  const surrenderSystem = new SurrenderSystem();
+  const battleEndOverlay = new BattleEndOverlay(container);
+  let battleStartTick = 0;
+  let battleEnded = false;
 
   // Renderers for command + combat
   const messengerRenderer = new MessengerRenderer(renderer.effectLayer);
@@ -143,6 +155,24 @@ async function main(): Promise<void> {
     if (deploymentManager.phase === DeploymentPhase.BATTLE) {
       combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem);
       moraleSystem.tick(unitManager, orderManager);
+
+      // Surrender check (after morale, before unitManager.tick)
+      if (!battleEnded) {
+        surrenderSystem.tick(tick, unitManager, supplySystem);
+
+        // Annihilation check: all enemy units dead
+        for (const checkTeam of [0, 1]) {
+          const aliveUnits = unitManager.getByTeam(checkTeam)
+            .filter(u => u.state !== UnitState.DEAD);
+          if (aliveUnits.length === 0) {
+            const winnerTeam = checkTeam === 0 ? 1 : 0;
+            eventBus.emit('battle:ended', {
+              winnerTeam,
+              victoryType: VictoryType.ANNIHILATION,
+            });
+          }
+        }
+      }
     }
 
     // Unit movement + order effects
@@ -232,6 +262,59 @@ async function main(): Promise<void> {
     deploymentRenderer.clear();
     gameLoop.resume();
     spawnEnemyArmy(unitManager);
+    supplySystem.initArmy(0, 100, 100);
+    supplySystem.initArmy(1, 100, 100);
+    surrenderSystem.initBattle(unitManager);
+    battleStartTick = gameState.getState().tickNumber;
+    battleEnded = false;
+  });
+
+  // --- Battle end handler (Step 9c) ---
+  eventBus.on('battle:ended', ({ winnerTeam, victoryType }) => {
+    if (battleEnded) return;
+    battleEnded = true;
+
+    // Compute battle result
+    const playerAlive = unitManager.getByTeam(0).filter(u => u.state !== UnitState.DEAD);
+    const enemyAlive = unitManager.getByTeam(1).filter(u => u.state !== UnitState.DEAD);
+    let playerCurrent = 0, enemyCurrent = 0;
+    for (const u of playerAlive) playerCurrent += u.size;
+    for (const u of enemyAlive) enemyCurrent += u.size;
+
+    // Estimate starting from maxSize (approximate)
+    let playerStarting = 0, enemyStarting = 0;
+    for (const u of unitManager.getByTeam(0)) {
+      playerStarting += u.maxSize;
+    }
+    for (const u of unitManager.getByTeam(1)) {
+      enemyStarting += u.maxSize;
+    }
+
+    const result: BattleResult = {
+      winnerTeam,
+      playerTeam: 0,
+      victoryType,
+      playerCasualties: playerStarting - playerCurrent,
+      playerStarting,
+      enemyCasualties: enemyStarting - enemyCurrent,
+      enemyStarting,
+      durationTicks: gameState.getState().tickNumber - battleStartTick,
+    };
+
+    battleEndOverlay.show(result);
+    gameLoop.pause();
+  });
+
+  // --- General killed victory condition (Step 9c) ---
+  eventBus.on('combat:unitDestroyed', ({ unitId }) => {
+    const unit = unitManager.get(unitId);
+    if (unit && unit.isGeneral && !battleEnded) {
+      const winnerTeam = unit.team === 0 ? 1 : 0;
+      eventBus.emit('battle:ended', {
+        winnerTeam,
+        victoryType: VictoryType.GENERAL_KILLED,
+      });
+    }
   });
 
   // --- Mouse tracking for drag ---
@@ -501,6 +584,7 @@ async function main(): Promise<void> {
     pathManager, commandSystem, combatSystem, moraleSystem,
     deploymentManager, deploymentRenderer, deploymentSidebar, dragArrowRenderer,
     messengerRenderer, commandRadiusRenderer, combatRenderer,
+    surrenderSystem, battleEndOverlay, supplySystem,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),
