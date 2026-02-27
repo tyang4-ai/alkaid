@@ -44,12 +44,13 @@ export class RadialMenu {
     for (let i = 0; i < WEDGE_COUNT; i++) {
       const startAngle = WEDGE_ANGLE * i - Math.PI / 2;
       const midAngle = startAngle + WEDGE_ANGLE / 2;
-      const labelR = (RADIAL_MENU_RADIUS + RADIAL_MENU_INNER_RADIUS) / 2 + 8;
+      // Place labels outside the ring, always horizontal
+      const labelR = RADIAL_MENU_RADIUS + 14;
       const lx = Math.cos(midAngle) * labelR;
       const ly = Math.sin(midAngle) * labelR;
 
       const info = ORDER_DISPLAY[ORDER_TYPES[i]];
-      const text = new Text({ text: info.chinese, style });
+      const text = new Text({ text: info.label, style });
       text.anchor.set(0.5);
       text.position.set(lx, ly);
       this.container.addChild(text);
@@ -95,7 +96,7 @@ export class RadialMenu {
     const dy = screenY - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (dist < RADIAL_MENU_INNER_RADIUS || dist > RADIAL_MENU_RADIUS + 20) return -1;
+    if (dist < RADIAL_MENU_INNER_RADIUS || dist > RADIAL_MENU_RADIUS + 15) return -1;
 
     let angle = Math.atan2(dy, dx) + Math.PI / 2;
     if (angle < 0) angle += Math.PI * 2;
@@ -115,22 +116,24 @@ export class RadialMenu {
       const r = RADIAL_MENU_RADIUS;
       const ir = RADIAL_MENU_INNER_RADIUS;
 
+      // Wedge background
       this.wedgeGraphics
         .moveTo(Math.cos(startAngle) * ir, Math.sin(startAngle) * ir)
         .lineTo(Math.cos(startAngle) * r, Math.sin(startAngle) * r)
         .arc(0, 0, r, startAngle, endAngle)
         .lineTo(Math.cos(endAngle) * ir, Math.sin(endAngle) * ir)
         .arc(0, 0, ir, endAngle, startAngle, true)
-        .fill({ color: fillColor, alpha: 0.85 })
+        .fill({ color: fillColor, alpha: 0.9 })
         .stroke({ width: 1, color: RADIAL_MENU_BORDER_COLOR, alpha: 0.5 });
 
+      // Colored accent line on outer edge of wedge
       const midAngle = startAngle + WEDGE_ANGLE / 2;
-      const dotR = (r + ir) / 2 - 5;
+      const accentPad = 0.04; // slight inset from wedge edges
       this.wedgeGraphics
-        .circle(Math.cos(midAngle) * dotR, Math.sin(midAngle) * dotR, 3)
-        .fill({ color: orderColor, alpha: 0.9 });
+        .arc(0, 0, r - 1, startAngle + accentPad, endAngle - accentPad)
+        .stroke({ width: 3, color: orderColor, alpha: isHovered ? 1.0 : 0.6 });
 
-      this.labels[i].style.fill = isHovered ? 0xFFFFFF : 0xDDDDDD;
+      this.labels[i].style.fill = isHovered ? 0xFFFFFF : 0xCCCCCC;
     }
   }
 

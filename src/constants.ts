@@ -323,9 +323,9 @@ export const ORDER_LINE_WIDTH = 1.5;
 export const ORDER_LINE_ALPHA = 0.6;
 export const ORDER_FLAG_SIZE = 6;
 
-export const RADIAL_MENU_RADIUS = 80;
-export const RADIAL_MENU_INNER_RADIUS = 25;
+export const RADIAL_MENU_RADIUS = 110;
+export const RADIAL_MENU_INNER_RADIUS = 40;
 export const RADIAL_MENU_WEDGE_COLOR = 0x1A1A2E;
 export const RADIAL_MENU_HOVER_COLOR = 0x2A2A4E;
 export const RADIAL_MENU_BORDER_COLOR = 0x555555;
-export const RADIAL_MENU_FONT_SIZE = 11;
+export const RADIAL_MENU_FONT_SIZE = 12;
