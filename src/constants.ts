@@ -329,3 +329,135 @@ export const RADIAL_MENU_WEDGE_COLOR = 0x1A1A2E;
 export const RADIAL_MENU_HOVER_COLOR = 0x2A2A4E;
 export const RADIAL_MENU_BORDER_COLOR = 0x555555;
 export const RADIAL_MENU_FONT_SIZE = 12;
+
+// --- Deployment Phase (Step 5b) ---
+export const DeploymentPhase = {
+  INACTIVE: 0,
+  DEPLOYING: 1,
+  COUNTDOWN: 2,
+  BATTLE: 3,
+} as const;
+export type DeploymentPhase = (typeof DeploymentPhase)[keyof typeof DeploymentPhase];
+
+export const FormationType = {
+  STANDARD_LINE: 0,
+  CRESCENT: 1,
+  ECHELON_LEFT: 2,
+  ECHELON_RIGHT: 3,
+  DEFENSIVE_SQUARE: 4,
+  AMBUSH: 5,
+} as const;
+export type FormationType = (typeof FormationType)[keyof typeof FormationType];
+
+export const FORMATION_DISPLAY: Record<FormationType, { label: string; chinese: string }> = {
+  [FormationType.STANDARD_LINE]:    { label: 'Standard Line',    chinese: '默认阵型' },
+  [FormationType.CRESCENT]:         { label: 'Crescent',         chinese: '月牙阵' },
+  [FormationType.ECHELON_LEFT]:     { label: 'Echelon Left',     chinese: '斜行阵(左)' },
+  [FormationType.ECHELON_RIGHT]:    { label: 'Echelon Right',    chinese: '斜行阵(右)' },
+  [FormationType.DEFENSIVE_SQUARE]: { label: 'Defensive Square', chinese: '方阵' },
+  [FormationType.AMBUSH]:           { label: 'Ambush',           chinese: '伏兵阵' },
+};
+
+// Deployment zone rendering — ink-wash / parchment map aesthetic
+export const DEPLOYMENT_ZONE_FRACTION = 0.25;
+export const DEPLOYMENT_ZONE_COLOR = 0xC9A84C;         // Warm gold ink wash (marked territory)
+export const DEPLOYMENT_ZONE_ALPHA = 0.22;
+export const DEPLOYMENT_ZONE_BORDER_COLOR = 0x8B6914;  // Dark aged-gold ink border
+export const DEPLOYMENT_ZONE_BORDER_ALPHA = 0.50;
+export const DEPLOYMENT_ZONE_BORDER_WIDTH = 1.5;
+export const DEPLOYMENT_GHOST_ALPHA = 0.55;
+export const DEPLOYMENT_GHOST_VALID_COLOR = 0x5B8C5A;  // Muted jade green
+export const DEPLOYMENT_GHOST_INVALID_COLOR = 0xA23B2C; // Cinnabar/vermillion red
+export const DEPLOYMENT_COMMAND_RADIUS_FRACTION = 0.30;
+export const DEPLOYMENT_COMMAND_RADIUS_COLOR = 0xC9A84C; // Warm gold, matches zone
+export const DEPLOYMENT_COMMAND_RADIUS_ALPHA = 0.12;
+export const DEPLOYMENT_RESERVE_DELAY_TICKS = 60;
+export const DEPLOYMENT_COUNTDOWN_SECONDS = 3;
+
+// Sidebar rendering — lacquered wood + parchment scroll
+export const SIDEBAR_WIDTH = 240;
+export const SIDEBAR_BG_COLOR = 0x1C1410;              // Deep lacquered rosewood
+export const SIDEBAR_BG_ALPHA = 0.94;
+export const SIDEBAR_ITEM_HEIGHT = 48;
+export const SIDEBAR_PADDING = 12;
+export const SIDEBAR_FONT_COLOR = 0xD4C4A0;            // Aged parchment ivory
+export const SIDEBAR_HIGHLIGHT_COLOR = 0x2A1F14;       // Dark wood grain stripe
+export const SIDEBAR_BUTTON_COLOR = 0x8B2500;          // Cinnabar red (vermillion seal)
+export const SIDEBAR_BUTTON_HOVER_COLOR = 0xA23B2C;    // Lighter cinnabar on hover
+
+// --- Pathfinding (Step 6) ---
+export const SPATIAL_HASH_CELL_SIZE = 64;  // px (~4 tiles)
+export const PATH_MAX_COMPUTATIONS_PER_TICK = 5;  // A* paths budgeted per sim tick
+export const PATH_CACHE_TTL_TICKS = 40;  // 2 seconds at 20Hz
+export const PATH_MAX_LENGTH = 5000;  // max nodes explored in a single A* search
+export const FLOW_FIELD_GROUP_THRESHOLD = 6;  // use flow field when 6+ units target same area
+export const FLOW_FIELD_TARGET_SNAP = 3;  // tiles — targets within this range share a flow field
+export const PATH_DIAGONAL_COST = 1.414;  // sqrt(2) for octile movement
+export const PATH_ARRIVAL_THRESHOLD = 4;  // pixels — unit "arrived" when this close to waypoint
+export const PATH_RECALC_DISTANCE = 48;  // pixels — recalc path if target moved more than this
+
+// Unit-specific terrain cost overrides (from ref-unit-stats.md)
+// Maps UnitType -> TerrainType -> moveCost override. Absent entries use TERRAIN_STATS default.
+export const UNIT_TERRAIN_COST_OVERRIDES: Partial<Record<UnitType, Partial<Record<TerrainType, number>>>> = {
+  // Dao Swordsmen: no penalty in forest or hills
+  [UnitType.DAO_SWORDSMEN]: {
+    [TerrainType.FOREST]: 1.0,
+    [TerrainType.HILLS]: 1.0,
+  },
+  // Light Cavalry: Forest=4.0, Hills=2.0, Mountains/Marsh impassable
+  [UnitType.LIGHT_CAVALRY]: {
+    [TerrainType.FOREST]: 4.0,
+    [TerrainType.HILLS]: 2.0,
+    [TerrainType.MOUNTAINS]: -1,
+    [TerrainType.MARSH]: -1,
+  },
+  // Heavy Cavalry: even worse in rough terrain
+  [UnitType.HEAVY_CAVALRY]: {
+    [TerrainType.FOREST]: 6.0,
+    [TerrainType.HILLS]: 2.5,
+    [TerrainType.MOUNTAINS]: -1,
+    [TerrainType.MARSH]: -1,
+  },
+  // Horse Archers: Hills=2.5, Forest/Mountains/Marsh impassable
+  [UnitType.HORSE_ARCHERS]: {
+    [TerrainType.FOREST]: -1,
+    [TerrainType.HILLS]: 2.5,
+    [TerrainType.MOUNTAINS]: -1,
+    [TerrainType.MARSH]: -1,
+  },
+  // Scouts: no penalty except mountains (1.5x instead of 3.0x)
+  [UnitType.SCOUTS]: {
+    [TerrainType.FOREST]: 1.0,
+    [TerrainType.HILLS]: 1.0,
+    [TerrainType.MARSH]: 1.0,
+    [TerrainType.MOUNTAINS]: 1.5,
+  },
+  // Naval units: ONLY on water/river, everything else impassable
+  [UnitType.MENG_CHONG]: {
+    [TerrainType.WATER]: 1.0, [TerrainType.RIVER]: 1.0,
+    [TerrainType.PLAINS]: -1, [TerrainType.FOREST]: -1, [TerrainType.HILLS]: -1,
+    [TerrainType.MOUNTAINS]: -1, [TerrainType.MARSH]: -1, [TerrainType.ROAD]: -1,
+    [TerrainType.CITY]: -1, [TerrainType.FORD]: -1,
+  },
+  [UnitType.LOU_CHUAN]: {
+    [TerrainType.WATER]: 1.0, [TerrainType.RIVER]: 1.0,
+    [TerrainType.PLAINS]: -1, [TerrainType.FOREST]: -1, [TerrainType.HILLS]: -1,
+    [TerrainType.MOUNTAINS]: -1, [TerrainType.MARSH]: -1, [TerrainType.ROAD]: -1,
+    [TerrainType.CITY]: -1, [TerrainType.FORD]: -1,
+  },
+  [UnitType.FIRE_SHIPS]: {
+    [TerrainType.WATER]: 1.0, [TerrainType.RIVER]: 1.0,
+    [TerrainType.PLAINS]: -1, [TerrainType.FOREST]: -1, [TerrainType.HILLS]: -1,
+    [TerrainType.MOUNTAINS]: -1, [TerrainType.MARSH]: -1, [TerrainType.ROAD]: -1,
+    [TerrainType.CITY]: -1, [TerrainType.FORD]: -1,
+  },
+};
+
+/** Get effective move cost for a unit type on a terrain type. Returns -1 if impassable. */
+export function getMoveCost(unitType: UnitType, terrainType: TerrainType): number {
+  const overrides = UNIT_TERRAIN_COST_OVERRIDES[unitType];
+  if (overrides && terrainType in overrides) {
+    return overrides[terrainType]!;
+  }
+  return TERRAIN_STATS[terrainType].moveCost;
+}

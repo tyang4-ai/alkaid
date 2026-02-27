@@ -16,6 +16,17 @@ export interface GameEvents {
   'input:rightClick': { worldX: number; worldY: number; screenX: number; screenY: number };
   'order:issued': { unitId: number; type: number };
   'order:cleared': { unitId: number };
+  'deployment:started': { rosterCount: number };
+  'deployment:unitPlaced': { rosterId: number; unitId: number; x: number; y: number };
+  'deployment:unitRemoved': { rosterId: number };
+  'deployment:formationApplied': { formation: number };
+  'deployment:countdownStarted': undefined;
+  'deployment:countdownTick': { remaining: number };
+  'deployment:battleStarted': undefined;
+  'input:mouseDown': { screenX: number; screenY: number; worldX: number; worldY: number };
+  'path:requested': { unitId: number };
+  'path:found': { unitId: number; length: number };
+  'path:notFound': { unitId: number };
 }
 
 type EventKey = keyof GameEvents;

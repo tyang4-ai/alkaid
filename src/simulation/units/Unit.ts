@@ -18,4 +18,10 @@ export interface Unit {
   experience: number;     // 0-100, default 0
   state: UnitState;
   facing: number;         // radians
+
+  // Pathfinding (Step 6)
+  path: Array<{ x: number; y: number }> | null;  // world-pixel waypoints
+  pathIndex: number;  // current waypoint index in path
+  targetX: number;    // final destination world-pixel X (from order)
+  targetY: number;    // final destination world-pixel Y (from order)
 }

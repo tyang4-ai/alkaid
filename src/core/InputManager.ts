@@ -21,6 +21,8 @@ export class InputManager {
   // Left-click drag state (dead zone distinguishes click from drag)
   private leftButtonDown = false;
   private leftDragging = false;
+  /** Set true to prevent left-drag from panning the camera (e.g. during deployment drag). */
+  suppressLeftDrag = false;
   private leftDownX = 0;
   private leftDownY = 0;
   private leftDragLastX = 0;
@@ -182,8 +184,8 @@ export class InputManager {
             y2: this._mouseY,
           };
         }
-      } else {
-        // Camera pan mode
+      } else if (!this.suppressLeftDrag) {
+        // Camera pan mode (skipped when suppressLeftDrag is set, e.g. deployment drag)
         if (!this.leftDragging) {
           if (pastDeadZone) {
             this.leftDragging = true;
@@ -208,11 +210,17 @@ export class InputManager {
       this.leftDownX = e.clientX;
       this.leftDownY = e.clientY;
 
+      // Emit mouseDown for deployment sidebar drag initiation
+      const rect = this.canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const world = this.camera.screenToWorld(screenX, screenY);
+      eventBus.emit('input:mouseDown', { screenX, screenY, worldX: world.x, worldY: world.y });
+
       if (e.ctrlKey) {
         this.ctrlBoxSelecting = true;
-        const rect = this.canvas.getBoundingClientRect();
-        this.boxStartScreenX = e.clientX - rect.left;
-        this.boxStartScreenY = e.clientY - rect.top;
+        this.boxStartScreenX = screenX;
+        this.boxStartScreenY = screenY;
       } else {
         this.ctrlBoxSelecting = false;
       }

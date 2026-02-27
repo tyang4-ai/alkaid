@@ -7,6 +7,7 @@ function createMockCamera() {
     pan: vi.fn(),
     zoomAt: vi.fn(),
     setViewport: vi.fn(),
+    screenToWorld: vi.fn((_sx: number, _sy: number) => ({ x: 0, y: 0 })),
     zoom: 1,
     viewportWidth: 1920,
     viewportHeight: 1080,
