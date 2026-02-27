@@ -537,3 +537,98 @@ export const FORM_UP_SPEED_PENALTY = 0.30;
 export const FORM_UP_COMPLETION_TICKS = 3;
 export const DISENGAGE_SPEED_PENALTY = 0.20;
 export const DISENGAGE_PENALTY_TICKS = 5;
+
+// --- Weather System (Step 9b) ---
+export const WeatherType = { CLEAR: 0, RAIN: 1, FOG: 2, WIND: 3, SNOW: 4 } as const;
+export type WeatherType = (typeof WeatherType)[keyof typeof WeatherType];
+
+export const WEATHER_MODIFIERS = {
+  [WeatherType.CLEAR]:  { rangedMult: 1.0, crossbowMult: 1.0, movementMult: 1.0, siegeAccuracyMult: 1.0, visibilityMult: 1.0, fireMult: 1.0, fordDangerMult: 1.0, ambushMoraleMult: 1.0 },
+  [WeatherType.RAIN]:   { rangedMult: 0.80, crossbowMult: 0.60, movementMult: 0.80, siegeAccuracyMult: 0.70, visibilityMult: 0.80, fireMult: 0.50, fordDangerMult: 1.50, ambushMoraleMult: 1.0 },
+  [WeatherType.FOG]:    { rangedMult: 0.80, crossbowMult: 0.80, movementMult: 1.0, siegeAccuracyMult: 1.0, visibilityMult: 0.50, fireMult: 1.0, fordDangerMult: 1.0, ambushMoraleMult: 2.0 },
+  [WeatherType.WIND]:   { rangedMult: 1.0, crossbowMult: 1.0, movementMult: 1.0, siegeAccuracyMult: 1.0, visibilityMult: 1.0, fireMult: 1.0, fordDangerMult: 1.0, ambushMoraleMult: 1.0 },
+  [WeatherType.SNOW]:   { rangedMult: 1.0, crossbowMult: 1.0, movementMult: 0.85, siegeAccuracyMult: 1.0, visibilityMult: 0.70, fireMult: 1.0, fordDangerMult: 0.0, ambushMoraleMult: 1.0 },
+};
+export const WIND_ACCURACY_BONUS = 0.10;
+export const WIND_RANGE_BONUS = 1;
+export const SNOW_FATIGUE_MULT = 1.50;
+export const SNOW_SOUTHERN_MORALE_PENALTY = -10;
+export const SNOW_ICE_BREAK_CHANCE = 0.10;
+export const SNOW_ICE_BREAK_CASUALTIES = 0.30;
+
+export const WEATHER_SHIFT_INTERVAL_TICKS = 200;
+export const WEATHER_SHIFT_CHANCE = 0.20;
+export const WEATHER_PROBABILITIES = [0.40, 0.20, 0.15, 0.15, 0.10];
+
+// --- Time of Day (Step 9b) ---
+export const TimeOfDay = { DAWN: 0, MORNING: 1, MIDDAY: 2, AFTERNOON: 3, DUSK: 4, NIGHT: 5 } as const;
+export type TimeOfDay = (typeof TimeOfDay)[keyof typeof TimeOfDay];
+export const TIME_PHASE_DURATION_TICKS = 200;
+
+export const TIME_OF_DAY_MODIFIERS = {
+  [TimeOfDay.DAWN]:      { visibilityMult: 0.80, moraleMod: 0, fatigueMult: 1.0, supplyMult: 1.0, rangedAccuracyMult: 1.0, attackerMoraleBonus: 10, fogChanceBonus: 0.20 },
+  [TimeOfDay.MORNING]:   { visibilityMult: 1.00, moraleMod: 0, fatigueMult: 1.0, supplyMult: 1.0, rangedAccuracyMult: 1.0, attackerMoraleBonus: 0, fogChanceBonus: 0 },
+  [TimeOfDay.MIDDAY]:    { visibilityMult: 1.00, moraleMod: 0, fatigueMult: 1.20, supplyMult: 1.30, rangedAccuracyMult: 1.0, attackerMoraleBonus: 0, fogChanceBonus: 0 },
+  [TimeOfDay.AFTERNOON]: { visibilityMult: 1.00, moraleMod: -5, fatigueMult: 1.10, supplyMult: 1.0, rangedAccuracyMult: 1.0, attackerMoraleBonus: 0, fogChanceBonus: 0 },
+  [TimeOfDay.DUSK]:      { visibilityMult: 0.60, moraleMod: 0, fatigueMult: 1.15, supplyMult: 1.0, rangedAccuracyMult: 0.85, attackerMoraleBonus: 0, fogChanceBonus: 0, defenderMoraleBonus: 5 },
+  [TimeOfDay.NIGHT]:     { visibilityMult: 0.30, moraleMod: -10, fatigueMult: 1.05, supplyMult: 1.0, rangedAccuracyMult: 0.80, attackerMoraleBonus: 0, fogChanceBonus: 0 },
+};
+export const NIGHT_VETERAN_EXP_THRESHOLD = 60;
+export const NIGHT_FRIENDLY_FIRE_CHANCE = 0.05;
+export const NIGHT_FIRE_MORALE_MULT = 1.30;
+
+// --- Fatigue (Step 9a) ---
+export const FATIGUE_MARCH_PER_TICK = 1;
+export const FATIGUE_FIGHTING_PER_TICK = 3;
+export const FATIGUE_FORD_PER_TICK = 5;
+export const FATIGUE_MOUNTAIN_PER_TICK = 2;
+export const FATIGUE_SIEGE_CARRY_PER_TICK = 2;
+export const FATIGUE_RECOVERY_STATIONARY = -2;
+export const FATIGUE_RECOVERY_WELL_FED_BONUS = -0.5;
+/** [fatigueThreshold, speedMultiplier] — first match where fatigue >= threshold wins. */
+export const FATIGUE_SPEED_THRESHOLDS: [number, number][] = [
+  [100, 0.30], [80, 0.50], [60, 0.70], [30, 0.85], [0, 1.00],
+];
+export const FATIGUE_MORALE_THRESHOLD = 80;
+export const FATIGUE_MORALE_PENALTY_PER_TICK = -1;
+
+// --- Supply (Step 9a) ---
+export const SUPPLY_BASE_CAPACITY = 100;
+export const SUPPLY_CONSUMPTION_PER_SOLDIER_PER_TICK = 0.01;
+export const SUPPLY_LOW_RATIONS_THRESHOLD = 0.50;
+export const SUPPLY_HUNGER_THRESHOLD = 0.25;
+export const SUPPLY_COLLAPSE_TICKS = 50;
+export const SUPPLY_WELL_FED_MORALE_PER_TICK = 0.5;
+export const SUPPLY_LOW_RATIONS_MORALE_PER_TICK = -1;
+export const SUPPLY_HUNGER_MORALE_PER_TICK = -3;
+export const SUPPLY_STARVATION_MORALE_PER_TICK = -5;
+export const SUPPLY_LOW_RATIONS_SPEED_MULT = 0.90;
+export const SUPPLY_HUNGER_SPEED_MULT = 0.80;
+export const SUPPLY_HUNGER_COMBAT_MULT = 0.80;
+export const SUPPLY_STARVATION_SPEED_MULT = 0.70;
+export const SUPPLY_STARVATION_COMBAT_MULT = 0.60;
+export const SUPPLY_STARVATION_FATIGUE_PER_TICK = 2;
+export const SUPPLY_HUNGER_DESERTION_PER_TICK = 0.5;
+export const SUPPLY_STARVATION_DESERTION_PER_TICK = 1.5;
+
+// --- Experience (Step 9a) ---
+export const EXP_KILL_THRESHOLD = 10;
+export const EXP_PER_KILL_BATCH = 1;
+export const EXP_ROUTE_ENEMY = 3;
+export const EXP_ROUTE_RADIUS_TILES = 5;
+export const EXP_HOLD_UNDER_BOMBARDMENT = 2;
+export const EXP_HOLD_BOMBARDMENT_TICKS = 20;
+
+// --- Morale Expansion (Step 9a) ---
+export const MORALE_WINNING_ENGAGEMENT_BONUS = 5;
+export const MORALE_WINNING_ENGAGEMENT_RADIUS_TILES = 5;
+export const MORALE_ELITE_GUARD_AURA = 3.0;
+export const MORALE_ELITE_GUARD_AURA_RADIUS_TILES = 3;
+export const MORALE_GENERAL_KILLED_HIT = -30;
+export const MORALE_ENCIRCLED_PER_TICK = -5;
+export const MORALE_OUTNUMBERED_PER_TICK = -1;
+export const MORALE_EXTENDED_COMBAT_PER_TICK = -0.5;
+export const MORALE_EXTENDED_COMBAT_THRESHOLD_TICKS = 30;
+export const MORALE_ARMY_ROUT_30_PERCENT = -20;
+export const MORALE_ARMY_ROUT_50_PERCENT = -40;
+export const MORALE_FAVORABLE_TERRAIN_BONUS = 2.0;

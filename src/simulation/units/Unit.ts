@@ -43,4 +43,9 @@ export interface Unit {
   disengageTicks: number;     // ticks remaining of disengage penalty
   orderModifier: OrderType | null;  // current behavioral modifier
   routTicks: number;          // ticks remaining where routed unit can't receive orders
+
+  // Metrics tracking (Step 9a) — optional until Step 9a merge
+  killCount?: number;
+  holdUnderBombardmentTicks?: number;
+  desertionFrac?: number;
 }

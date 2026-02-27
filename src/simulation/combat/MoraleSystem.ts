@@ -1,6 +1,7 @@
 import type { Unit } from '../units/Unit';
 import type { UnitManager } from '../units/UnitManager';
 import type { OrderManager } from '../OrderManager';
+import type { EnvironmentState } from '../environment/EnvironmentState';
 import { eventBus } from '../../core/EventBus';
 import {
   UnitType, UnitState, OrderType,
@@ -10,6 +11,7 @@ import {
   RALLY_MORALE_THRESHOLD_OFFSET,
   ROUT_NO_ORDERS_TICKS,
   MORALE_LOSS_PER_CASUALTY_PERCENT,
+  TimeOfDay, NIGHT_VETERAN_EXP_THRESHOLD,
 } from '../../constants';
 
 const commandRadiusPixels = DEFAULT_MAP_WIDTH * TILE_SIZE * COMMAND_RADIUS_FRACTION;
@@ -29,6 +31,9 @@ export class MoraleSystem {
   tick(
     unitManager: UnitManager,
     orderManager: OrderManager,
+    _armyFoodPercents?: Map<number, number>,
+    _terrainGrid?: unknown,
+    env?: EnvironmentState,
   ): void {
     const units = unitManager.getAllArray();
 
@@ -48,6 +53,13 @@ export class MoraleSystem {
       // Passive recovery when idle and not in combat
       if (unit.state === UnitState.IDLE && unit.combatTargetId === -1) {
         unit.morale = Math.min(100, unit.morale + 0.5);
+      }
+
+      // Night combat penalty: -3 morale/tick for non-veteran units in combat (Step 9b)
+      if (env && env.timeOfDay === TimeOfDay.NIGHT && unit.combatTargetId !== -1) {
+        if (unit.experience < NIGHT_VETERAN_EXP_THRESHOLD) {
+          unit.morale = Math.max(0, unit.morale - 3);
+        }
       }
 
       // Check for rout

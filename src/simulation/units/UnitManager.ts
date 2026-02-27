@@ -77,6 +77,11 @@ export class UnitManager {
       disengageTicks: 0,
       orderModifier: null,
       routTicks: 0,
+
+      // Metrics tracking (Step 9a)
+      killCount: 0,
+      holdUnderBombardmentTicks: 0,
+      desertionFrac: 0,
     };
 
     this.units.set(unit.id, unit);

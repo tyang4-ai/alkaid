@@ -45,6 +45,20 @@ export interface GameEvents {
   'unit:rallied': { unitId: number };
   'unit:combined': { survivorId: number; absorbedId: number };
   'unit:split': { originalId: number; newId: number };
+
+  // Metrics systems (Step 9a)
+  'supply:updated': { team: number; food: number; maxFood: number; foodPercent: number; starvationTicks: number };
+  'supply:collapse': { team: number };
+  'supply:desertion': { unitId: number; team: number; deserted: number };
+  'fatigue:exhausted': { unitId: number; fatigue: number };
+  'experience:gained': { unitId: number; amount: number; source: string };
+  'experience:tierUp': { unitId: number; newTier: number };
+  'morale:generalKilled': { team: number };
+  'morale:armyRoutCascade': { team: number; routPercent: number; moraleHit: number };
+
+  // Environment system (Step 9b)
+  'weather:changed': { oldWeather: number; newWeather: number; tick: number };
+  'time:phaseChanged': { oldPhase: number; newPhase: number; tick: number };
 }
 
 type EventKey = keyof GameEvents;

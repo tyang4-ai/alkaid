@@ -10,6 +10,7 @@ import { DeploymentSidebar } from './rendering/DeploymentSidebar';
 import { MessengerRenderer } from './rendering/MessengerRenderer';
 import { CommandRadiusRenderer } from './rendering/CommandRadiusRenderer';
 import { CombatRenderer } from './rendering/CombatRenderer';
+import { EnvironmentHUD } from './rendering/EnvironmentHUD';
 import { GameLoop } from './core/GameLoop';
 import { GameState } from './simulation/GameState';
 import { TerrainGenerator } from './simulation/terrain/TerrainGenerator';
@@ -21,13 +22,16 @@ import { PathManager } from './simulation/pathfinding/PathManager';
 import { CommandSystem } from './simulation/command/CommandSystem';
 import { CombatSystem } from './simulation/combat/CombatSystem';
 import { MoraleSystem } from './simulation/combat/MoraleSystem';
+import { WeatherSystem } from './simulation/environment/WeatherSystem';
+import { TimeOfDaySystem } from './simulation/environment/TimeOfDaySystem';
+import type { EnvironmentState } from './simulation/environment/EnvironmentState';
 import { Camera } from './core/Camera';
 import { InputManager } from './core/InputManager';
 import { eventBus } from './core/EventBus';
 import {
   DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, TILE_SIZE,
   UnitType, DeploymentPhase, TerrainType, OrderType,
-  CAMERA_DRAG_DEAD_ZONE,
+  CAMERA_DRAG_DEAD_ZONE, TimeOfDay,
 } from './constants';
 import type { FormationType } from './constants';
 
@@ -70,6 +74,12 @@ async function main(): Promise<void> {
   // Combat System (Step 8)
   const combatSystem = new CombatSystem(terrainGrid);
   const moraleSystem = new MoraleSystem();
+
+  // Environment Systems (Step 9b)
+  const weatherSystem = new WeatherSystem(seed);
+  const timeOfDaySystem = new TimeOfDaySystem(TimeOfDay.DAWN);
+  const environmentHUD = new EnvironmentHUD(container);
+  let environmentState: EnvironmentState | null = null;
 
   // Renderers for command + combat
   const messengerRenderer = new MessengerRenderer(renderer.effectLayer);
@@ -141,8 +151,15 @@ async function main(): Promise<void> {
 
     // Combat system: detection + damage processing
     if (deploymentManager.phase === DeploymentPhase.BATTLE) {
-      combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem);
-      moraleSystem.tick(unitManager, orderManager);
+      // Environment systems first (Step 9b)
+      if (environmentState) {
+        environmentState.currentTick = tick;
+        weatherSystem.tick(environmentState);
+        timeOfDaySystem.tick(environmentState);
+      }
+
+      combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem, undefined, environmentState ?? undefined);
+      moraleSystem.tick(unitManager, orderManager, undefined, undefined, environmentState ?? undefined);
     }
 
     // Unit movement + order effects
@@ -199,6 +216,9 @@ async function main(): Promise<void> {
       deploymentRenderer.showGhost(world.x, world.y, dragUnitType, isValid);
     }
 
+    // Environment HUD (Step 9b)
+    environmentHUD.update(environmentState);
+
     const mousePos = inputManager.getMouseScreenPos();
     radialMenu.updateHover(mousePos.x, mousePos.y);
     renderer.updateFPS(gameLoop.currentFPS, gameLoop.currentTick, unitManager.count);
@@ -232,6 +252,16 @@ async function main(): Promise<void> {
     deploymentRenderer.clear();
     gameLoop.resume();
     spawnEnemyArmy(unitManager);
+
+    // Initialize environment (Step 9b)
+    const initialWeather = weatherSystem.getInitialWeather();
+    environmentState = {
+      weather: initialWeather.weather,
+      windDirection: initialWeather.windDirection,
+      timeOfDay: TimeOfDay.DAWN,
+      currentTick: 0,
+      battleStartTime: TimeOfDay.DAWN,
+    };
   });
 
   // --- Mouse tracking for drag ---
@@ -501,6 +531,7 @@ async function main(): Promise<void> {
     pathManager, commandSystem, combatSystem, moraleSystem,
     deploymentManager, deploymentRenderer, deploymentSidebar, dragArrowRenderer,
     messengerRenderer, commandRadiusRenderer, combatRenderer,
+    weatherSystem, timeOfDaySystem, environmentHUD, environmentState,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),

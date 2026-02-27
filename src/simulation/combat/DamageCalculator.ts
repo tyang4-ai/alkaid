@@ -1,5 +1,6 @@
 import type { Unit } from '../units/Unit';
 import type { TerrainType } from '../../constants';
+import type { EnvironmentState } from '../environment/EnvironmentState';
 import {
   UNIT_TYPE_CONFIGS, TERRAIN_STATS,
   UnitType, getTypeMatchup, isRangedUnit, canFireWhileMoving,
@@ -10,6 +11,8 @@ import {
   CAVALRY_CHARGE_BONUS_LIGHT,
   CAVALRY_CHARGE_BONUS_HEAVY,
   ROUT_DAMAGE_TAKEN_MULT,
+  WEATHER_MODIFIERS,
+  TIME_OF_DAY_MODIFIERS,
 } from '../../constants';
 
 export interface DamageResult {
@@ -36,6 +39,8 @@ export function calculateDamage(
   defender: Unit,
   defenderTerrain: TerrainType,
   attackerMoving: boolean,
+  supplyCombatMult: number = 1.0,
+  env?: EnvironmentState,
 ): DamageResult {
   const aCfg = UNIT_TYPE_CONFIGS[attacker.type];
   const dCfg = UNIT_TYPE_CONFIGS[defender.type];
@@ -103,7 +108,26 @@ export function calculateDamage(
   }
 
   // Hold defense bonus applied via orderModifier (checked externally)
-  // Weather multiplier: not yet implemented (Step 9), defaults to 1.0
+
+  // Weather + time-of-day multipliers (Step 9b)
+  let weatherMult = 1.0;
+  if (env && ranged) {
+    const wm = WEATHER_MODIFIERS[env.weather as keyof typeof WEATHER_MODIFIERS];
+    if (wm) {
+      if (attacker.type === UnitType.NU_CROSSBOWMEN) {
+        weatherMult *= wm.crossbowMult;
+      } else if (attacker.type === UnitType.SIEGE_ENGINEERS) {
+        weatherMult *= wm.siegeAccuracyMult;
+      } else {
+        weatherMult *= wm.rangedMult;
+      }
+    }
+    // Time of day ranged accuracy
+    const tm = TIME_OF_DAY_MODIFIERS[env.timeOfDay as keyof typeof TIME_OF_DAY_MODIFIERS];
+    if (tm) {
+      weatherMult *= tm.rangedAccuracyMult;
+    }
+  }
 
   const finalDamage = baseDamage
     * typeMultiplier
@@ -113,7 +137,9 @@ export function calculateDamage(
     * expMult
     * chargeBonus
     * shieldReduction
-    * routingMult;
+    * routingMult
+    * supplyCombatMult
+    * weatherMult;
 
   const soldiersKilled = Math.floor(finalDamage / dCfg.hpPerSoldier);
 

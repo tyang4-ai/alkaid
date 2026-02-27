@@ -3,6 +3,7 @@ import type { UnitManager } from '../units/UnitManager';
 import type { SpatialHash } from '../pathfinding/SpatialHash';
 import type { TerrainGrid } from '../terrain/TerrainGrid';
 import type { MoraleSystem } from './MoraleSystem';
+import type { EnvironmentState } from '../environment/EnvironmentState';
 import { calculateDamage } from './DamageCalculator';
 import { eventBus } from '../../core/EventBus';
 import {
@@ -31,6 +32,8 @@ export class CombatSystem {
     unitManager: UnitManager,
     spatialHash: SpatialHash,
     moraleSystem: MoraleSystem,
+    _armyFoodPercents?: Map<number, number>,
+    env?: EnvironmentState,
   ): void {
     // Rebuild position map for spatial queries
     this.positionMap.clear();
@@ -46,7 +49,7 @@ export class CombatSystem {
     }
 
     // Process active combats every tick
-    this.processActiveCombats(currentTick, unitManager, moraleSystem);
+    this.processActiveCombats(currentTick, unitManager, moraleSystem, env);
   }
 
   private detectEngagements(unitManager: UnitManager, spatialHash: SpatialHash): void {
@@ -100,6 +103,7 @@ export class CombatSystem {
     currentTick: number,
     unitManager: UnitManager,
     moraleSystem: MoraleSystem,
+    env?: EnvironmentState,
   ): void {
     for (const unit of unitManager.getAll()) {
       if (unit.state === UnitState.DEAD) continue;
@@ -162,7 +166,7 @@ export class CombatSystem {
         Math.min(defTileY, this.terrainGrid.height - 1),
       );
 
-      const result = calculateDamage(unit, target, defTerrain, isMoving);
+      const result = calculateDamage(unit, target, defTerrain, isMoving, 1.0, env);
 
       if (result.finalDamage <= 0) continue;
 
