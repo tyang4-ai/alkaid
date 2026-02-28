@@ -63,6 +63,18 @@ export interface GameEvents {
   // Surrender/battle end (Step 9c)
   'battle:surrender': { team: number; pressure: number; victoryType: number; factors: { morale: number; casualty: number; supply: number; encirclement: number; leadership: number } };
   'battle:ended': { winnerTeam: number; victoryType: number };
+
+  // Step 10: Battle HUD, Alerts, Speed Controls, Hotkeys
+  'alert:fired': { type: string; message: string; worldX?: number; worldY?: number; severity: 'danger' | 'warning' | 'info' };
+  'retreat:initiated': { team: number };
+  'retreat:completed': { team: number };
+  'stalemate:detected': undefined;
+  'group:assigned': { groupId: number; unitIds: number[] };
+  'group:selected': { groupId: number };
+  'codex:toggled': { open: boolean };
+  'battle:eventLogged': { tick: number; message: string; worldX?: number; worldY?: number; category: string };
+  'cinematic:started': { type: string };
+  'cinematic:ended': { type: string };
 }
 
 type EventKey = keyof GameEvents;

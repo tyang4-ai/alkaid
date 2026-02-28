@@ -150,10 +150,7 @@ export class InputManager {
   private onKeyDown(e: KeyboardEvent): void {
     if (InputManager.GAME_KEYS.has(e.code)) e.preventDefault();
     this.keysDown.add(e.code);
-
-    if (e.code === 'Escape') {
-      eventBus.emit('selection:changed', { ids: [] });
-    }
+    // Escape handling moved to HotkeyManager (Step 10)
   }
 
   private onKeyUp(e: KeyboardEvent): void {

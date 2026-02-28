@@ -652,5 +652,27 @@ export const VictoryType = {
   ANNIHILATION: 1,
   GENERAL_KILLED: 2,
   STARVATION: 3,
+  RETREAT: 4,
+  STALEMATE: 5,
 } as const;
 export type VictoryType = (typeof VictoryType)[keyof typeof VictoryType];
+
+// --- Step 10 constants ---
+// Alert system
+export const ALERT_BANNER_DURATION_MS = 4000;
+export const ALERT_MAX_VISIBLE = 3;
+export const ALERT_LOG_MAX_ENTRIES = 50;
+
+// Speed control
+export const SPEED_OPTIONS = [0.5, 1.0, 2.0, 3.0] as const;
+
+// Retreat
+export const RETREAT_EVACUATION_TICKS = 60; // 3 seconds at 20Hz
+export const STALEMATE_DETECTION_TICKS = 100;
+export const STALEMATE_CASUALTY_THRESHOLD = 5;
+
+// Unit groups
+export const UNIT_GROUP_COUNT = 9;
+
+// Cinematic
+export const CINEMATIC_DURATION_MS = 3500;

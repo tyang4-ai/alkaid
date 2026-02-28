@@ -13,6 +13,16 @@ import { CombatRenderer } from './rendering/CombatRenderer';
 import { UnitInfoPanel } from './rendering/UnitInfoPanel';
 import { EnvironmentHUD } from './rendering/EnvironmentHUD';
 import { BattleEndOverlay, type BattleResult } from './rendering/BattleEndOverlay';
+import { SpeedControls } from './rendering/SpeedControls';
+import { PauseMenu } from './rendering/PauseMenu';
+import { AlertSystem } from './rendering/AlertSystem';
+import { BattleHUD } from './rendering/BattleHUD';
+import { HotkeyManager } from './core/HotkeyManager';
+import { RetreatSystem } from './simulation/RetreatSystem';
+import { Codex } from './rendering/Codex';
+import { BattleEventLogger } from './simulation/BattleEventLogger';
+import { AfterActionReport } from './rendering/AfterActionReport';
+import { BattleCinematic } from './rendering/BattleCinematic';
 import { GameLoop } from './core/GameLoop';
 import { GameState } from './simulation/GameState';
 import { TerrainGenerator } from './simulation/terrain/TerrainGenerator';
@@ -101,6 +111,17 @@ async function main(): Promise<void> {
   let battleStartTick = 0;
   let battleEnded = false;
 
+  // Step 10: Speed Controls + Pause Menu + Alert System + Battle HUD
+  const speedControls = new SpeedControls(container, eventBus);
+  const pauseMenu = new PauseMenu(container, eventBus);
+  const alertSystem = new AlertSystem(container, eventBus, unitManager);
+  const battleHUD = new BattleHUD(container);
+  const retreatSystem = new RetreatSystem();
+  const codex = new Codex(container, eventBus);
+  const battleEventLogger = new BattleEventLogger(eventBus);
+  const afterActionReport = new AfterActionReport(container);
+  const battleCinematic = new BattleCinematic(container);
+
   // Renderers for command + combat
   const messengerRenderer = new MessengerRenderer(renderer.effectLayer);
   const commandRadiusRenderer = new CommandRadiusRenderer(renderer.effectLayer);
@@ -120,6 +141,20 @@ async function main(): Promise<void> {
 
   const gameState = new GameState();
   const gameLoop = new GameLoop();
+
+  // Step 10: HotkeyManager (after all dependencies exist)
+  const hotkeyManager = new HotkeyManager(
+    eventBus, selectionManager, unitManager, orderManager,
+    commandSystem, camera, gameState,
+  );
+  hotkeyManager.setCodexToggle(() => codex.toggle());
+  hotkeyManager.setEscapeAction(() => {
+    if (deploymentManager.phase === DeploymentPhase.BATTLE && !battleEnded) {
+      pauseMenu.showRetreatConfirm(() => {
+        retreatSystem.initiateRetreat(0, unitManager, orderManager);
+      });
+    }
+  });
 
   // --- Deployment drag state ---
   let dragRosterId: number | null = null;
@@ -187,6 +222,15 @@ async function main(): Promise<void> {
       // Surrender check (after morale, before unitManager.tick)
       if (!battleEnded) {
         surrenderSystem.tick(tick, unitManager, supplySystem);
+        retreatSystem.tick(unitManager, tick);
+
+        // Battle event logger sampling (every 10 ticks)
+        battleEventLogger.sample(tick, unitManager, supplySystem);
+
+        // Stalemate check every 20 ticks
+        if (tick % 20 === 0) {
+          retreatSystem.checkStalemate(unitManager, tick);
+        }
 
         // Annihilation check: all enemy units dead
         for (const checkTeam of [0, 1]) {
@@ -260,6 +304,16 @@ async function main(): Promise<void> {
     // Environment HUD (Step 9b)
     environmentHUD.update(environmentState);
 
+    // Step 10: Speed Controls, Alert System, Battle HUD — show only during battle
+    if (deploymentManager.phase === DeploymentPhase.BATTLE) {
+      speedControls.show();
+      speedControls.update(gameState.getState().paused, gameState.getState().speedMultiplier);
+      alertSystem.update(frameDt);
+      battleHUD.update(unitManager, supplySystem, surrenderSystem, gameState);
+    } else {
+      speedControls.hide();
+    }
+
     const mousePos = inputManager.getMouseScreenPos();
     radialMenu.updateHover(mousePos.x, mousePos.y);
     // Unit Info Panel (updates every frame for live stat bars)
@@ -314,6 +368,11 @@ async function main(): Promise<void> {
     surrenderSystem.initBattle(unitManager);
     battleStartTick = gameState.getState().tickNumber;
     battleEnded = false;
+
+    // Step 10: Initialize alert system + show battle HUD + start event logging
+    alertSystem.init();
+    battleHUD.show();
+    battleEventLogger.startLogging(battleStartTick);
   });
 
   // --- Battle end handler (Step 9c) ---
@@ -348,8 +407,36 @@ async function main(): Promise<void> {
       durationTicks: gameState.getState().tickNumber - battleStartTick,
     };
 
-    battleEndOverlay.show(result);
+    // Stop event logging, pause, play cinematic, then show report
+    battleEventLogger.stopLogging(gameState.getState().tickNumber);
     gameLoop.pause();
+
+    // Play cinematic then show after-action report
+    battleCinematic.play(victoryType).then(() => {
+      afterActionReport.show(
+        battleEventLogger.getMetrics(), unitManager, victoryType, winnerTeam,
+      );
+      // Keep battleEndOverlay as data fallback
+      battleEndOverlay.show(result);
+    });
+  });
+
+  // --- Retreat completed → defeat ---
+  eventBus.on('retreat:completed', ({ team }) => {
+    if (!battleEnded) {
+      const winnerTeam = team === 0 ? 1 : 0;
+      eventBus.emit('battle:ended', {
+        winnerTeam,
+        victoryType: VictoryType.RETREAT,
+      });
+    }
+  });
+
+  // --- Stalemate detected → show withdraw option ---
+  eventBus.on('stalemate:detected', () => {
+    if (!battleEnded) {
+      alertSystem.fire('stalemate', '僵局 — Stalemate detected. Consider retreat.', 'warning');
+    }
   });
 
   // --- General killed → army-wide morale hit + victory condition ---
@@ -654,7 +741,8 @@ async function main(): Promise<void> {
     messengerRenderer, commandRadiusRenderer, combatRenderer,
     fatigueSystem, supplySystem, experienceSystem,
     weatherSystem, timeOfDaySystem, environmentHUD, environmentState,
-    surrenderSystem, battleEndOverlay,
+    surrenderSystem, battleEndOverlay, speedControls, pauseMenu, alertSystem, battleHUD,
+    hotkeyManager, retreatSystem, codex, battleEventLogger, afterActionReport, battleCinematic,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),
