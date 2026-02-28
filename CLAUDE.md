@@ -67,6 +67,8 @@ For every future step, **before implementation**, analyze whether sub-steps can 
 2. If parallelizable: create **separate git worktrees** for each independent sub-task, develop them simultaneously, then merge sequentially back to the main branch
 3. **Chrome MCP visual testing is always deferred** until after ALL sub-steps for a given step are merged to the main branch — never test mid-merge
 4. Resolve merge conflicts in shared files by concatenating additions (constants, events, main.ts tick calls)
+5. **Coordinator pre-defines shared contracts before dispatch**: Pre-lock function signatures (parameter names/types/order), assign constant sections with comment headers, pre-define EventBus event names+payloads, specify main.ts insertion points, and document unit conventions (fractions vs percentages, optional vs required fields)
+6. **Always commit or stash all uncommitted changes** before creating worktree branches — uncommitted changes on the base branch cause significant merge complexity
 
 ## Build Order
 Follow the numbered steps in the main plan sequentially. Each step has a **Verify** checkpoint — complete it before moving on. The phases are:

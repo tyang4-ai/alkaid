@@ -594,7 +594,7 @@ export const FATIGUE_MORALE_THRESHOLD = 80;
 export const FATIGUE_MORALE_PENALTY_PER_TICK = -1;
 
 // --- Supply (Step 9a) ---
-export const SUPPLY_BASE_CAPACITY = 100;
+export const SUPPLY_BASE_CAPACITY = 6000;
 export const SUPPLY_CONSUMPTION_PER_SOLDIER_PER_TICK = 0.01;
 export const SUPPLY_LOW_RATIONS_THRESHOLD = 0.50;
 export const SUPPLY_HUNGER_THRESHOLD = 0.25;

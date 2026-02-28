@@ -296,9 +296,9 @@ async function main(): Promise<void> {
     gameLoop.resume();
     spawnEnemyArmy(unitManager);
 
-    // Initialize supply for both armies
-    supplySystem.initArmy(0, 100, 100);
-    supplySystem.initArmy(1, 100, 100);
+    // Initialize supply for both armies (uses SUPPLY_BASE_CAPACITY default)
+    supplySystem.initArmy(0);
+    supplySystem.initArmy(1);
 
     // Initialize environment (Step 9b)
     const initialWeather = weatherSystem.getInitialWeather();
