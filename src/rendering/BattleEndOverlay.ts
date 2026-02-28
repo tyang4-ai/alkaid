@@ -124,6 +124,8 @@ export class BattleEndOverlay {
       [VictoryType.ANNIHILATION]: 'Annihilation',
       [VictoryType.GENERAL_KILLED]: 'General Killed',
       [VictoryType.STARVATION]: 'Starvation',
+      [VictoryType.RETREAT]: 'Retreat',
+      [VictoryType.STALEMATE]: 'Stalemate',
     };
     return names[type] ?? 'Unknown';
   }
@@ -134,6 +136,8 @@ export class BattleEndOverlay {
       [VictoryType.ANNIHILATION]: '\u5168\u6B7C',
       [VictoryType.GENERAL_KILLED]: '\u65A9\u5C06',
       [VictoryType.STARVATION]: '\u65AD\u7CAE',
+      [VictoryType.RETREAT]: '\u64A4\u9000',
+      [VictoryType.STALEMATE]: '\u50F5\u5C40',
     };
     return names[type] ?? '?';
   }

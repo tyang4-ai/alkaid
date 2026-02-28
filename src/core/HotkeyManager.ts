@@ -30,6 +30,7 @@ export class HotkeyManager {
   private handleKeyDown: (e: KeyboardEvent) => void;
   private onEscapeAction: (() => void) | null = null;
   private onCodexToggle: (() => void) | null = null;
+  private _battleActive = false;
 
   constructor(
     eventBus: EventBus,
@@ -59,11 +60,16 @@ export class HotkeyManager {
     this.onCodexToggle = fn;
   }
 
+  setBattleActive(active: boolean): void {
+    this._battleActive = active;
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
     const state = this.gameState.getState();
 
-    // Space: toggle pause
+    // Space: toggle pause (only during battle)
     if (e.code === 'Space') {
+      if (!this._battleActive) return;
       e.preventDefault();
       if (state.paused) {
         this.eventBus.emit('game:resumed', undefined);

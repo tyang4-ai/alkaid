@@ -102,6 +102,7 @@ describe('HotkeyManager', () => {
   });
 
   it('Space toggles pause', () => {
+    hotkeys.setBattleActive(true);
     const spy = vi.fn();
     eventBus.on('game:paused', spy);
     fireKey('Space');
@@ -116,6 +117,7 @@ describe('HotkeyManager', () => {
     const pausedState = createMockGameState({ paused: true });
     const mod = await import('../HotkeyManager');
     hotkeys = new mod.HotkeyManager(eventBus, selMgr as any, unitMgr as any, {} as any, cmdSys as any, camera as any, pausedState as any);
+    hotkeys.setBattleActive(true);
 
     const spy = vi.fn();
     eventBus.on('game:resumed', spy);

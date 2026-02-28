@@ -12,7 +12,7 @@ import { CommandRadiusRenderer } from './rendering/CommandRadiusRenderer';
 import { CombatRenderer } from './rendering/CombatRenderer';
 import { UnitInfoPanel } from './rendering/UnitInfoPanel';
 import { EnvironmentHUD } from './rendering/EnvironmentHUD';
-import { BattleEndOverlay, type BattleResult } from './rendering/BattleEndOverlay';
+import { BattleEndOverlay } from './rendering/BattleEndOverlay';
 import { SpeedControls } from './rendering/SpeedControls';
 import { PauseMenu } from './rendering/PauseMenu';
 import { AlertSystem } from './rendering/AlertSystem';
@@ -373,39 +373,13 @@ async function main(): Promise<void> {
     alertSystem.init();
     battleHUD.show();
     battleEventLogger.startLogging(battleStartTick);
+    hotkeyManager.setBattleActive(true);
   });
 
   // --- Battle end handler (Step 9c) ---
   eventBus.on('battle:ended', ({ winnerTeam, victoryType }) => {
     if (battleEnded) return;
     battleEnded = true;
-
-    // Compute battle result
-    const playerAlive = unitManager.getByTeam(0).filter(u => u.state !== UnitState.DEAD);
-    const enemyAlive = unitManager.getByTeam(1).filter(u => u.state !== UnitState.DEAD);
-    let playerCurrent = 0, enemyCurrent = 0;
-    for (const u of playerAlive) playerCurrent += u.size;
-    for (const u of enemyAlive) enemyCurrent += u.size;
-
-    // Estimate starting from maxSize (approximate)
-    let playerStarting = 0, enemyStarting = 0;
-    for (const u of unitManager.getByTeam(0)) {
-      playerStarting += u.maxSize;
-    }
-    for (const u of unitManager.getByTeam(1)) {
-      enemyStarting += u.maxSize;
-    }
-
-    const result: BattleResult = {
-      winnerTeam,
-      playerTeam: 0,
-      victoryType,
-      playerCasualties: playerStarting - playerCurrent,
-      playerStarting,
-      enemyCasualties: enemyStarting - enemyCurrent,
-      enemyStarting,
-      durationTicks: gameState.getState().tickNumber - battleStartTick,
-    };
 
     // Stop event logging, pause, play cinematic, then show report
     battleEventLogger.stopLogging(gameState.getState().tickNumber);
@@ -416,8 +390,7 @@ async function main(): Promise<void> {
       afterActionReport.show(
         battleEventLogger.getMetrics(), unitManager, victoryType, winnerTeam,
       );
-      // Keep battleEndOverlay as data fallback
-      battleEndOverlay.show(result);
+      battleEndOverlay.hide();
     });
   });
 
