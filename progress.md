@@ -1,6 +1,6 @@
 # Alkaid (破军) — Implementation Progress
 
-Last updated: 2026-02-26
+Last updated: 2026-02-27
 
 ## Phase 1: Core Engine
 
@@ -23,10 +23,10 @@ Last updated: 2026-02-26
 | 9a | War metrics: supply, fatigue, experience | DONE | SupplySystem (army food tracking, consumption/foraging, starvation, speed/combat penalties), FatigueSystem (movement/combat/idle fatigue, recovery, speed thresholds, weather/time modifiers), ExperienceSystem (kill-based +1/10 kills, bombardment +2/20 ticks, rout bonus +3, tier system 0-4, tier-up events), UnitInfoPanel (detail view with stats bars). Morale expanded: supply/fatigue penalties, Elite Guard aura, extended combat, army rout cascade (30%/50%), favorable terrain, outnumbered penalty. |
 | 9b | Weather + time of day | DONE | EnvironmentState shared interface, WeatherSystem (5 types: clear/rain/fog/wind/snow, seeded RNG, adjacent transitions every 200 ticks at 20% chance), TimeOfDaySystem (6 phases: dawn/morning/midday/afternoon/dusk/night cycling every 200 ticks), EnvironmentHUD (top-center overlay with Chinese/English names + progress bar). Weather modifiers: rain -20%/-40% ranged, fog -20% ranged, snow 1.5x fatigue, midday 1.2x fatigue/1.3x supply. Night: -3 morale/tick for non-veterans in combat, -20% ranged accuracy. ~24 new tests. |
 | 9c | Surrender system | DONE | SurrenderSystem (5-factor weighted pressure: morale 30%, casualty 25%, supply 20%, encirclement 15%, leadership 10%; quadrant-based encirclement detection; >=80 pressure for 5 consecutive checks = surrender), VictoryType enum (SURRENDER/ANNIHILATION/GENERAL_KILLED/STARVATION), BattleEndOverlay (full-screen victory/defeat with Chinese text 大勝/勝/敗/投降, battle summary, Continue button), annihilation + general-killed victory conditions in main.ts. ~16 new tests. |
-| 10 | Battle HUD + alerts | TODO | Raw numbers, alert system, speed controls, hotkeys, retreat |
-| 10b | In-game codex | TODO | Unit/terrain/weather/mechanics reference |
-| 10c | After-action report | TODO | Stats, timeline, key moments |
-| 10d | Victory/defeat cinematics | TODO | Dramatic end-of-battle sequences |
+| 10 | Battle HUD + alerts | DONE | BattleHUD (live army stats: troops, morale, supply, fatigue, pressure), AlertSystem (notification banners with auto-fade, severity colors, clickable camera snap, alert log), SpeedControls (pause + 0.5x/1x/2x/3x), PauseMenu (pause overlay + retreat confirmation), HotkeyManager (Space/1-4/A/H/R/F/C/G/D/Y/Tab/Ctrl+1-9/Escape/F12), RetreatSystem (player-initiated retreat + stalemate detection). 47 new tests (418 total). |
+| 10b | In-game codex | DONE | Codex (5-tab encyclopedia: Units with all 13 types from UNIT_TYPE_CONFIGS, Terrain from TERRAIN_STATS, Weather from WEATHER_MODIFIERS, Mechanics formulas, Controls hotkey reference). F12 toggle, pauses game while open. |
+| 10c | After-action report | DONE | BattleEventLogger (subscribes to battle events, samples morale/supply/casualties every 10 ticks), AfterActionReport (post-battle stats screen with SVG timeline charts, per-squad breakdown table, key moments, Continue button). |
+| 10d | Victory/defeat cinematics | DONE | BattleCinematic (5 CSS-animated sequences: Surrender 投降, Annihilation 殲滅, General Killed 將亡, Retreat 撤退, Stalemate 僵局). Skip on keypress/click. Plays before AfterActionReport in battle end flow. |
 
 ## Phase 3: Campaign + Persistence
 
