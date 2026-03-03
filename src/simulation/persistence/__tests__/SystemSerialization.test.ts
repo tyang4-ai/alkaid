@@ -161,7 +161,16 @@ describe('OrderManager serialization', () => {
 // --- SupplySystem serialization ---
 describe('SupplySystem serialization', () => {
   it('round-trips army supply state', () => {
-    const grid = new TerrainGrid(10, 10);
+    const size = 10;
+    const len = size * size;
+    const grid = new TerrainGrid({
+      width: size, height: size, seed: 42, templateId: 'test',
+      elevation: new Float32Array(len),
+      moisture: new Float32Array(len),
+      terrain: new Uint8Array(len),
+      riverFlow: new Int8Array(len).fill(-1),
+      tileBitmask: new Uint8Array(len),
+    });
     const ss = new SupplySystem(grid);
     ss.initArmy(0, 5000, 6000);
     ss.initArmy(1, 3000, 6000);
