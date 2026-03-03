@@ -1,10 +1,18 @@
 import type { EventBus } from '../core/EventBus';
 
+export interface SaveCallbacks {
+  onQuickSave: () => void;
+  onQuickLoad: () => void;
+  onSaveGame: () => void;
+  onLoadGame: () => void;
+}
+
 export class PauseMenu {
   private overlay: HTMLDivElement;
   private retreatDialog: HTMLDivElement | null = null;
   private eventBus: EventBus;
   private onRetreatConfirm: (() => void) | null = null;
+  private saveCallbacks: SaveCallbacks | null = null;
 
   constructor(parentElement: HTMLElement, eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -40,6 +48,44 @@ export class PauseMenu {
     });
     panel.appendChild(resumeBtn);
 
+    // Save system buttons
+    const quickSaveBtn = document.createElement('button');
+    quickSaveBtn.textContent = 'Quick Save 快存';
+    quickSaveBtn.className = 'save-btn-quicksave';
+    this.styleMenuButton(quickSaveBtn);
+    quickSaveBtn.style.marginTop = '8px';
+    quickSaveBtn.addEventListener('click', () => this.saveCallbacks?.onQuickSave());
+    panel.appendChild(quickSaveBtn);
+
+    const quickLoadBtn = document.createElement('button');
+    quickLoadBtn.textContent = 'Quick Load 快讀';
+    quickLoadBtn.className = 'save-btn-quickload';
+    this.styleMenuButton(quickLoadBtn);
+    quickLoadBtn.style.marginTop = '4px';
+    quickLoadBtn.addEventListener('click', () => this.saveCallbacks?.onQuickLoad());
+    panel.appendChild(quickLoadBtn);
+
+    const saveGameBtn = document.createElement('button');
+    saveGameBtn.textContent = 'Save Game 存檔';
+    saveGameBtn.className = 'save-btn-save';
+    this.styleMenuButton(saveGameBtn);
+    saveGameBtn.style.marginTop = '4px';
+    saveGameBtn.addEventListener('click', () => this.saveCallbacks?.onSaveGame());
+    panel.appendChild(saveGameBtn);
+
+    const loadGameBtn = document.createElement('button');
+    loadGameBtn.textContent = 'Load Game 讀檔';
+    loadGameBtn.className = 'save-btn-load';
+    this.styleMenuButton(loadGameBtn);
+    loadGameBtn.style.marginTop = '4px';
+    loadGameBtn.addEventListener('click', () => this.saveCallbacks?.onLoadGame());
+    panel.appendChild(loadGameBtn);
+
+    // Divider before menu button
+    const divider = document.createElement('div');
+    divider.style.cssText = 'width: 100%; height: 1px; background: #8B7D3C; margin: 12px 0; opacity: 0.4;';
+    panel.appendChild(divider);
+
     const menuBtn = document.createElement('button');
     menuBtn.textContent = 'Return to Menu';
     this.styleMenuButton(menuBtn);
@@ -64,6 +110,10 @@ export class PauseMenu {
       background: #8B2500; color: #D4C4A0; border: 1px solid #8B7D3C;
       border-radius: 4px; cursor: pointer; font-size: 16px; font-family: serif;
     `;
+  }
+
+  setSaveCallbacks(callbacks: SaveCallbacks): void {
+    this.saveCallbacks = callbacks;
   }
 
   show(): void {
