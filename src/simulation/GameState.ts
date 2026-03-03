@@ -1,3 +1,6 @@
+import type { Serializable } from './persistence/Serializable';
+import type { GameStateSnapshot } from './persistence/SaveTypes';
+
 export interface GameStateData {
   tickNumber: number;
   paused: boolean;
@@ -5,7 +8,7 @@ export interface GameStateData {
   battleTimeTicks: number;
 }
 
-export class GameState {
+export class GameState implements Serializable<GameStateSnapshot> {
   private state: GameStateData = {
     tickNumber: 0,
     paused: false,
@@ -37,5 +40,22 @@ export class GameState {
       speedMultiplier: 1,
       battleTimeTicks: 0,
     };
+  }
+
+  serialize(): GameStateSnapshot {
+    const s = this.state;
+    return {
+      tickNumber: s.tickNumber,
+      paused: s.paused,
+      speedMultiplier: s.speedMultiplier,
+      battleTimeTicks: s.battleTimeTicks,
+    };
+  }
+
+  deserialize(data: GameStateSnapshot): void {
+    this.state.tickNumber = data.tickNumber;
+    this.state.paused = data.paused;
+    this.state.speedMultiplier = data.speedMultiplier;
+    this.state.battleTimeTicks = data.battleTimeTicks;
   }
 }

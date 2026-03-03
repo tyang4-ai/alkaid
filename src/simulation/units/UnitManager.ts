@@ -12,6 +12,8 @@ import { SupplySystem } from '../metrics/SupplySystem';
 import { eventBus } from '../../core/EventBus';
 import type { PathManager } from '../pathfinding/PathManager';
 import type { OrderManager } from '../OrderManager';
+import type { Serializable } from '../persistence/Serializable';
+import type { UnitSnapshot } from '../persistence/SaveTypes';
 
 export interface SpawnOptions {
   type: UnitType;
@@ -24,7 +26,7 @@ export interface SpawnOptions {
   isGeneral?: boolean;
 }
 
-export class UnitManager {
+export class UnitManager implements Serializable<{ units: UnitSnapshot[]; nextId: number }> {
   private units = new Map<number, Unit>();
   private nextId = 1;
 
@@ -263,5 +265,96 @@ export class UnitManager {
     this.units.clear();
     this.nextId = 1;
     eventBus.emit('units:cleared', undefined);
+  }
+
+  serialize(): { units: UnitSnapshot[]; nextId: number } {
+    const units: UnitSnapshot[] = [];
+    for (const u of this.units.values()) {
+      units.push({
+        id: u.id,
+        type: u.type,
+        team: u.team,
+        x: u.x,
+        y: u.y,
+        prevX: u.prevX,
+        prevY: u.prevY,
+        size: u.size,
+        maxSize: u.maxSize,
+        hp: u.hp,
+        morale: u.morale,
+        fatigue: u.fatigue,
+        supply: u.supply,
+        experience: u.experience,
+        state: u.state,
+        facing: u.facing,
+        path: u.path ? u.path.map(p => ({ x: p.x, y: p.y })) : null,
+        pathIndex: u.pathIndex,
+        targetX: u.targetX,
+        targetY: u.targetY,
+        isGeneral: u.isGeneral,
+        pendingOrderType: u.pendingOrderType,
+        pendingOrderTick: u.pendingOrderTick,
+        attackCooldown: u.attackCooldown,
+        lastAttackTick: u.lastAttackTick,
+        hasCharged: u.hasCharged,
+        combatTargetId: u.combatTargetId,
+        combatTicks: u.combatTicks,
+        siegeSetupTicks: u.siegeSetupTicks,
+        formUpTicks: u.formUpTicks,
+        disengageTicks: u.disengageTicks,
+        orderModifier: u.orderModifier,
+        routTicks: u.routTicks,
+        killCount: u.killCount ?? 0,
+        holdUnderBombardmentTicks: u.holdUnderBombardmentTicks ?? 0,
+        desertionFrac: u.desertionFrac ?? 0,
+      });
+    }
+    return { units, nextId: this.nextId };
+  }
+
+  deserialize(data: { units: UnitSnapshot[]; nextId: number }): void {
+    this.units.clear();
+    for (const s of data.units) {
+      const unit: Unit = {
+        id: s.id,
+        type: s.type,
+        team: s.team,
+        x: s.x,
+        y: s.y,
+        prevX: s.prevX,
+        prevY: s.prevY,
+        size: s.size,
+        maxSize: s.maxSize,
+        hp: s.hp,
+        morale: s.morale,
+        fatigue: s.fatigue,
+        supply: s.supply,
+        experience: s.experience,
+        state: s.state,
+        facing: s.facing,
+        path: s.path ? s.path.map(p => ({ x: p.x, y: p.y })) : null,
+        pathIndex: s.pathIndex,
+        targetX: s.targetX,
+        targetY: s.targetY,
+        isGeneral: s.isGeneral,
+        pendingOrderType: s.pendingOrderType,
+        pendingOrderTick: s.pendingOrderTick,
+        attackCooldown: s.attackCooldown,
+        lastAttackTick: s.lastAttackTick,
+        hasCharged: s.hasCharged,
+        combatTargetId: s.combatTargetId,
+        combatTicks: s.combatTicks,
+        siegeSetupTicks: s.siegeSetupTicks,
+        formUpTicks: s.formUpTicks,
+        disengageTicks: s.disengageTicks,
+        orderModifier: s.orderModifier,
+        routTicks: s.routTicks,
+        killCount: s.killCount,
+        holdUnderBombardmentTicks: s.holdUnderBombardmentTicks,
+        desertionFrac: s.desertionFrac,
+      };
+      this.units.set(unit.id, unit);
+    }
+    this.nextId = data.nextId;
   }
 }
