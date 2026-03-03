@@ -78,3 +78,14 @@ Follow the numbered steps in the main plan sequentially. Each step has a **Verif
 4. AI Opponent (Steps 14-16)
 4b. QoL + Tech (Steps 14b-14f)
 5. Art + Polish (Steps 17-19)
+
+## Git Workflow
+- **Default branch:** `main` — always branch from `main`, merge back to `main`
+- **Branch naming:** `feat/<step>-<description>`, `fix/<description>`, `docs/<description>`, `chore/<description>`
+- **Commits:** Conventional commit prefixes (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`). Keep messages concise, focused on "why" not "what"
+- **Feature branches:** One branch per step or feature. Use worktrees for parallel sub-step work
+- **No direct pushes to `main`** for multi-file changes — use feature branches and merge locally or via PR
+- **Keep `main` green:** All tests must pass before merging to `main`
+- **No force-push to `main`** — ever
+- **Tag releases** at phase boundaries (e.g., `v0.1-core-engine`, `v0.2-mechanics`)
+- **Push regularly** — push after each completed step or meaningful milestone
