@@ -1,6 +1,6 @@
 # Alkaid (破军) — Implementation Progress
 
-Last updated: 2026-02-27
+Last updated: 2026-03-02
 
 ## Phase 1: Core Engine
 
@@ -32,7 +32,7 @@ Last updated: 2026-02-27
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 11 | Save system | TODO | LocalStorage + IndexedDB, auto-save, export/import |
+| 11 | Save system | DONE | Serializable<T> interface on all 11 systems, SaveManager (IndexedDB + localStorage), SaveValidator, MigrationChain, SaveLoadScreen (Civ 6-style), PauseMenu save buttons, SaveToast, auto-save, emergency crash recovery, export/import JSON. 32 new tests (450 total). Visual testing pending (Chrome MCP unavailable). |
 | 12 | Campaign map + recruitment + roguelike | TODO | 20 territories, recruitment, unlocks, random events |
 | 13 | Fog of war + scouting | TODO | Vision, LOS, scout detection |
 
@@ -75,3 +75,4 @@ Last updated: 2026-02-27
 - **2026-02-26**: Steps 7+8 complete. Command System + Combat System. Separate General unit type (UnitType.GENERAL), CommandSystem with messenger delay (speed: 4.0 base/12.0 in-radius, retreat 1.5x, rally 0.5x, general-dead 0.5x + 15% misinterpret), order queue with pause/flush, MessengerRenderer (gold dots + fading trail), CommandRadiusRenderer. CombatSystem (SpatialHash-based detection, engagement, DamageCalculator with full formula, MoraleSystem with rout/rally/cascade, SquadOps combine/split). Order effects (HOLD +10% def, CHARGE 1.3x speed +fatigue, FORM_UP +20% armor, DISENGAGE break combat). Rally as 9th radial menu wedge. CombatRenderer (red attack lines). HP-pool damage model (accumulates partial damage). 259 tests pass.
 - **2026-02-26**: Step 5b complete. Deployment phase. DeploymentZone with 5 template-specific zone generators (open_plains, mountain_pass, river_valley density-based, siege, wetlands). DeploymentManager state machine (INACTIVE→DEPLOYING→COUNTDOWN→BATTLE) with roster management, formation auto-placement, countdown timer, reserve spawning. 6 FormationTemplates (Standard Line, Crescent, Echelon Left/Right, Defensive Square, Ambush). DeploymentRenderer (gold zone overlay baked to RenderTexture, ghost preview shapes, command radius). DeploymentSidebar (roster with shape icons + Chinese/English names, formation dropdown, Begin Battle button, countdown overlay). Drag-drop with suppressLeftDrag to prevent camera pan. Ancient Chinese aesthetic colors (lacquered rosewood, cinnabar, jade, aged gold). 158 tests pass.
 - **2026-02-27**: Steps 10-10d complete. Battle HUD, alerts, speed controls, hotkeys, retreat, codex, after-action report, cinematics. 418 tests pass. Browser-tested: BattleHUD live stats, SpeedControls, PauseMenu, Codex (5 tabs), retreat confirmation, AfterActionReport with timeline/squad table, BattleCinematic. Bug fixes: PauseMenu no longer shows during deployment (battleActive guard), BattleEndOverlay hidden when AfterActionReport shows, RETREAT/STALEMATE victory type names added. 小篆 font deferred to Step 18.
+- **2026-03-02**: Step 11 complete. Save system. Serializable<T> interface on all 11 stateful systems (GameState, UnitManager, OrderManager, SupplySystem, SurrenderSystem, CommandSystem, WeatherSystem, TimeOfDaySystem, DeploymentManager, RetreatSystem, BattleEventLogger). SaveManager (IndexedDB persistent saves + localStorage emergency recovery), SaveValidator (runtime type checking), MigrationChain (version-based migration). SaveLoadScreen (Civ 6-style full-screen overlay with named saves, delete, export/import). PauseMenu 4 save buttons (Quick Save/Load, Save/Load Game). SaveToast notification. Auto-save every 60s during battle, emergency save on beforeunload. 32 new tests (450 total). Visual testing deferred (Chrome MCP unavailable).
