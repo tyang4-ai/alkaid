@@ -4,8 +4,8 @@ import {
 } from '../../constants';
 import type { EventBus } from '../../core/EventBus';
 import type {
-  CampaignState, ArmyRoster, Resources, CampaignSquad,
-  BattleResult, Serializable, Territory,
+  CampaignState, ArmyRoster, CampaignSquad,
+  BattleResult, Serializable,
 } from './CampaignTypes';
 import { TerritoryManager } from './TerritoryManager';
 import { createTerritories } from './TerritoryGraph';
@@ -202,7 +202,6 @@ export class CampaignManager implements Serializable<CampaignState> {
 
   processBattleResult(result: BattleResult): void {
     // Match surviving squads by squadId
-    const survivingIds = new Set(result.survivingPlayerSquads.map(s => s.squadId));
     const updatedSquads: CampaignSquad[] = [];
 
     for (const squad of this.state.roster.squads) {

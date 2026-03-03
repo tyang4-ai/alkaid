@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TerritoryManager } from '../TerritoryManager';
 import { createTerritories, STARTING_TERRITORY_IDS } from '../TerritoryGraph';
-import { CampaignTerritoryType } from '../../../constants';
 import type { Territory } from '../CampaignTypes';
 
 describe('TerritoryManager', () => {

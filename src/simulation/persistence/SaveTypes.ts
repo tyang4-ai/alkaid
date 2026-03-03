@@ -1,4 +1,9 @@
 import type { OrderType, UnitType, UnitState } from '../../constants';
+import type { CampaignSnapshot as CampaignSnapshotType, CampaignSaveSlotMeta as CampaignSaveSlotMetaType } from '../campaign/CampaignTypes';
+
+// Re-export campaign types so consumers can import from SaveTypes
+export type CampaignSnapshot = CampaignSnapshotType;
+export type CampaignSaveSlotMeta = CampaignSaveSlotMetaType;
 
 // --- Save File Envelope ---
 
@@ -188,17 +193,6 @@ export interface BattleEventLoggerSnapshot {
   startTick: number;
   endTick: number;
   sampleInterval: number;
-}
-
-// --- Campaign Stub ---
-
-export interface CampaignSnapshot {
-  territories: unknown;
-  army: unknown;
-  turn: unknown;
-  unlocks: unknown;
-  difficulty: unknown;
-  seed: unknown;
 }
 
 // --- Game Settings ---

@@ -53,21 +53,40 @@ import {
   UnitType, UnitState, DeploymentPhase, TerrainType, OrderType,
   VictoryType, CAMERA_DRAG_DEAD_ZONE, TimeOfDay,
   SAVE_AUTO_INTERVAL_MS, SAVE_QUICKSAVE_ID,
+  CampaignPhase,
 } from './constants';
 import type { FormationType } from './constants';
+
+// Campaign imports (Step 12)
+import { CampaignManager } from './simulation/campaign/CampaignManager';
+import { UnlockManager } from './simulation/campaign/UnlockManager';
+import { RecruitmentManager } from './simulation/campaign/RecruitmentManager';
+import { EnemyArmyGenerator } from './simulation/campaign/EnemyArmyGenerator';
+import { RandomEventSystem } from './simulation/campaign/RandomEventSystem';
+import type { BattleResult } from './simulation/campaign/CampaignTypes';
+import { NewRunScreen } from './rendering/NewRunScreen';
+import { CampaignMapScreen } from './rendering/CampaignMapScreen';
+import { CampScreen } from './rendering/CampScreen';
+import { IntelScreen } from './rendering/IntelScreen';
+import { RandomEventModal } from './rendering/RandomEventModal';
+import { ClemencyModal } from './rendering/ClemencyModal';
+import { RunSummaryScreen } from './rendering/RunSummaryScreen';
+
+type AppMode = 'campaign_ui' | 'battle';
 
 async function main(): Promise<void> {
   const container = document.getElementById('game-container');
   if (!container) throw new Error('Missing #game-container');
 
+  let appMode: AppMode = 'campaign_ui';
+
   const renderer = new Renderer();
   await renderer.init(container);
 
-  // Generate terrain
+  // Terrain (mutable — regenerated per battle)
   let currentSeed = Date.now();
   let currentTemplateId = 'river_valley';
-  const terrainGen = new TerrainGenerator(currentSeed);
-  let terrainGrid = terrainGen.generate(currentTemplateId);
+  let terrainGrid = new TerrainGenerator(currentSeed).generate(currentTemplateId);
 
   // Render terrain
   const terrainRenderer = new TerrainRenderer(renderer.terrainLayer);
@@ -86,27 +105,27 @@ async function main(): Promise<void> {
   const dragArrowRenderer = new DragArrowRenderer(renderer.effectLayer);
   const radialMenu = new RadialMenu(renderer.uiLayer);
 
-  // Pathfinding
-  const pathManager = new PathManager(terrainGrid);
+  // Pathfinding (mutable — recreated per battle)
+  let pathManager = new PathManager(terrainGrid);
 
   // Command System (Step 7)
   const commandSystem = new CommandSystem();
 
-  // Combat System (Step 8)
-  const combatSystem = new CombatSystem(terrainGrid);
+  // Combat System (Step 8, mutable — terrain-dependent)
+  let combatSystem = new CombatSystem(terrainGrid);
   const moraleSystem = new MoraleSystem();
 
-  // Metrics Systems (Step 9a)
-  const fatigueSystem = new FatigueSystem(terrainGrid);
-  const supplySystem = new SupplySystem(terrainGrid);
+  // Metrics Systems (Step 9a, mutable — terrain-dependent)
+  let fatigueSystem = new FatigueSystem(terrainGrid);
+  let supplySystem = new SupplySystem(terrainGrid);
   const experienceSystem = new ExperienceSystem();
 
   // Unit Info Panel (Step 9a)
   const unitInfoPanel = new UnitInfoPanel(container);
 
   // Environment Systems (Step 9b)
-  const weatherSystem = new WeatherSystem(currentSeed);
-  const timeOfDaySystem = new TimeOfDaySystem(TimeOfDay.DAWN);
+  let weatherSystem = new WeatherSystem(currentSeed);
+  let timeOfDaySystem = new TimeOfDaySystem(TimeOfDay.DAWN);
   const environmentHUD = new EnvironmentHUD(container);
   let environmentState: EnvironmentState | null = null;
 
@@ -242,6 +261,469 @@ async function main(): Promise<void> {
     saveManager.restoreBattle(emergencySnapshot);
   }
 
+  // --- Campaign Systems (Step 12) ---
+  const unlockManager = new UnlockManager();
+  const campaignManager = new CampaignManager(eventBus);
+  const enemyArmyGenerator = new EnemyArmyGenerator();
+  const recruitmentManager = new RecruitmentManager();
+  const randomEventSystem = new RandomEventSystem();
+
+  // Campaign UI screens
+  const newRunScreen = new NewRunScreen();
+  const campaignMapScreen = new CampaignMapScreen();
+  const campScreen = new CampScreen();
+  const intelScreen = new IntelScreen();
+  const randomEventModal = new RandomEventModal();
+  const clemencyModal = new ClemencyModal();
+  const runSummaryScreen = new RunSummaryScreen();
+
+  // Territory ID being attacked (set when entering battle from campaign)
+  let currentBattleTerritoryId: string | null = null;
+
+  // --- Terrain regeneration helper ---
+  function regenerateTerrain(seed: number, templateId: string): void {
+    currentSeed = seed;
+    // Fallback unknown templates to closest match
+    const templateMap: Record<string, string> = {
+      dense_forest: 'wetlands',
+      fortified_city: 'siege',
+    };
+    currentTemplateId = templateMap[templateId] ?? templateId;
+    terrainGrid = new TerrainGenerator(currentSeed).generate(currentTemplateId);
+    terrainRenderer.bake(terrainGrid, renderer.pixiRenderer);
+    eventBus.emit('terrain:generated', { seed: currentSeed, templateId: currentTemplateId });
+
+    // Recreate terrain-dependent systems
+    pathManager = new PathManager(terrainGrid);
+    combatSystem = new CombatSystem(terrainGrid);
+    fatigueSystem = new FatigueSystem(terrainGrid);
+    supplySystem = new SupplySystem(terrainGrid);
+  }
+
+  // --- Reset battle state between campaigns ---
+  function resetBattleSystems(): void {
+    // Clear all units
+    unitManager.deserialize({ units: [], nextId: 1 });
+    orderManager.deserialize([]);
+    commandSystem.deserialize({ messengers: [], nextMessengerId: 1, queue: [] });
+    supplySystem.deserialize({ armies: [] });
+    surrenderSystem.deserialize({ teamStates: [] });
+    retreatSystem.deserialize({ retreatingTeams: [], retreatStartTick: [], lastStalemateCheck: 0 });
+    battleEventLogger.deserialize({
+      events: [], moraleHistory: [], supplyHistory: [], casualtyHistory: [],
+      startTick: 0, endTick: 0, sampleInterval: 20,
+    });
+    battleEnded = false;
+    battleStartTick = 0;
+    environmentState = null;
+
+    // Reset game state (tick counter etc.)
+    gameState.deserialize({ tickNumber: 0, paused: true, speedMultiplier: 1, battleTimeTicks: 0 });
+
+    // Clear visual state
+    selectionManager.deselectAll();
+    unitRenderer.update(unitManager.getAll(), 0);
+    messengerRenderer.update(commandSystem.getActiveMessengers(), 0);
+    combatRenderer.update(combatSystem.getEngagedPairs(unitManager), 0);
+    commandRadiusRenderer.update(undefined, 0, 0);
+    dragArrowRenderer.hide();
+    deploymentRenderer.clear();
+    deploymentSidebar.hide();
+    battleHUD.hide();
+    speedControls.hide();
+    environmentHUD.update(null);
+    hotkeyManager.setBattleActive(false);
+    afterActionReport.hide();
+    battleEndOverlay.hide();
+  }
+
+  // --- Start a battle from campaign ---
+  function startBattle(territoryId: string): void {
+    const state = campaignManager.getState();
+    const tm = campaignManager.getTerritoryManager();
+    const territory = tm.get(territoryId);
+    if (!territory) return;
+
+    currentBattleTerritoryId = territoryId;
+    appMode = 'battle';
+
+    // Hide all campaign screens
+    campaignMapScreen.hide();
+    campScreen.hide();
+    intelScreen.hide();
+
+    // Reset battle state
+    resetBattleSystems();
+
+    // Generate terrain for this territory
+    regenerateTerrain(state.seed + state.turn * 100 + territory.id.length, territory.terrainTemplate);
+
+    // Convert campaign roster to deployment roster
+    const readySquads = campaignManager.getPlayerRosterForDeployment();
+    const deployRoster = readySquads.map(s => ({
+      type: s.type,
+      size: s.size,
+      experience: s.experience,
+      isGeneral: s.type === UnitType.GENERAL,
+      squadId: s.squadId,
+    }));
+
+    // Always add General if not in roster
+    const hasGeneral = deployRoster.some(r => r.type === UnitType.GENERAL);
+    if (!hasGeneral && state.roster.generalAlive) {
+      deployRoster.push({
+        type: UnitType.GENERAL,
+        size: 1,
+        experience: state.roster.generalExperience,
+        isGeneral: true,
+        squadId: -1,
+      });
+    }
+
+    // Start deployment
+    deploymentManager.startDeployment(deployRoster, terrainGrid, currentTemplateId);
+    deploymentSidebar.show();
+    deploymentSidebar.setRoster(deploymentManager.getRoster());
+
+    const zone = deploymentManager.getZone();
+    if (zone) {
+      deploymentRenderer.renderZone(zone, TILE_SIZE, renderer.pixiRenderer);
+    }
+
+    // Ensure renderer is showing battle visuals
+    renderer.render(0);
+    gameLoop.start();
+    gameLoop.pause(); // Paused for deployment
+  }
+
+  // --- Spawn campaign enemy army ---
+  function spawnCampaignEnemy(): void {
+    const state = campaignManager.getState();
+    const tm = campaignManager.getTerritoryManager();
+    const territory = currentBattleTerritoryId ? tm.get(currentBattleTerritoryId) : null;
+    if (!territory) {
+      spawnDefaultEnemyArmy(unitManager);
+      return;
+    }
+
+    const enemySquads = enemyArmyGenerator.generate(
+      territory, state.turn, state.territoriesConquered, state.seed,
+    );
+
+    const enemyCol = Math.floor(terrainGrid.width * 0.75);
+    const centerRow = Math.floor(terrainGrid.height / 2);
+    const spacing = 4;
+    const blocked = new Set([TerrainType.WATER, TerrainType.MOUNTAINS, TerrainType.RIVER]);
+    const startRow = centerRow - Math.floor((enemySquads.length - 1) / 2) * spacing;
+
+    for (let i = 0; i < enemySquads.length; i++) {
+      const row = startRow + i * spacing;
+      const pos = findValidPos(terrainGrid.width, terrainGrid.height, enemyCol, row, blocked);
+      unitManager.spawn({
+        type: enemySquads[i].type,
+        team: 1,
+        x: pos.x,
+        y: pos.y,
+        size: enemySquads[i].size,
+        experience: enemySquads[i].experience,
+        isGeneral: enemySquads[i].isGeneral,
+      });
+    }
+  }
+
+  // --- Collect battle result for campaign processing ---
+  function collectBattleResult(winnerTeam: number, victoryType: number): BattleResult {
+    const playerUnits = unitManager.getByTeam(0);
+    const enemyUnits = unitManager.getByTeam(1);
+
+    let totalEnemiesDefeated = 0;
+    for (const u of enemyUnits) {
+      totalEnemiesDefeated += u.maxSize - u.size;
+    }
+
+    let totalPlayerLosses = 0;
+    const survivingPlayerSquads: BattleResult['survivingPlayerSquads'] = [];
+    for (const u of playerUnits) {
+      totalPlayerLosses += u.maxSize - u.size;
+      if (u.state !== UnitState.DEAD && u.size > 0) {
+        survivingPlayerSquads.push({
+          squadId: (u as any).squadId ?? u.id,
+          type: u.type,
+          size: u.size,
+          experience: u.experience,
+        });
+      }
+    }
+
+    // Captured enemy squads (for clemency)
+    const capturedEnemySquads: BattleResult['capturedEnemySquads'] = [];
+    if (winnerTeam === 0 && victoryType === VictoryType.SURRENDER) {
+      for (const u of enemyUnits) {
+        if (u.state !== UnitState.DEAD && u.size > 0 && !u.isGeneral) {
+          capturedEnemySquads.push({
+            type: u.type,
+            size: u.size,
+            experience: u.experience,
+          });
+        }
+      }
+    }
+
+    const generalAlive = playerUnits.some(u => u.isGeneral && u.state !== UnitState.DEAD);
+    const noSquadFullyLost = !playerUnits.some(
+      u => !u.isGeneral && u.state === UnitState.DEAD,
+    );
+
+    return {
+      won: winnerTeam === 0,
+      victoryType,
+      generalAlive,
+      survivingPlayerSquads,
+      capturedEnemySquads,
+      totalEnemiesDefeated,
+      totalPlayerLosses,
+      battleDurationTicks: gameState.getState().tickNumber - battleStartTick,
+      noSquadFullyLost,
+    };
+  }
+
+  // --- Handle battle continue (after AAR "Continue" button) ---
+  function onBattleContinue(winnerTeam: number, victoryType: number): void {
+    afterActionReport.hide();
+    const result = collectBattleResult(winnerTeam, victoryType);
+
+    // Handle clemency for surrendered enemy
+    if (result.won && result.capturedEnemySquads.length > 0) {
+      const totalCaptured = result.capturedEnemySquads.reduce((sum, s) => sum + s.size, 0);
+      clemencyModal.show(totalCaptured, (accepted) => {
+        if (!accepted) {
+          result.capturedEnemySquads.length = 0; // Clear captured
+        }
+        finishBattleProcessing(result);
+      });
+    } else {
+      finishBattleProcessing(result);
+    }
+  }
+
+  function finishBattleProcessing(result: BattleResult): void {
+    campaignManager.processBattleResult(result);
+
+    // Check run end conditions
+    const runStatus = campaignManager.checkRunEnd();
+    if (runStatus === 'win' || runStatus === 'lose') {
+      campaignManager.transitionTo(CampaignPhase.RUN_OVER);
+      const pointsEarned = campaignManager.calculateUnlockPoints();
+      if (campaignManager.getState().mode === 'ironman') {
+        unlockManager.addRunResult({
+          territoriesConquered: campaignManager.getState().territoriesConquered,
+          battlesWon: campaignManager.getState().battlesWon,
+          won: runStatus === 'win',
+          bonusObjectivesCompleted: campaignManager.getState().bonusObjectivesCompleted.length,
+        });
+      }
+      // Delete ironman save on run end
+      saveManager.deleteCampaignSave().catch(() => {});
+      runSummaryScreen.show(campaignManager.getState(), unlockManager, pointsEarned);
+    } else {
+      campaignManager.transitionTo(CampaignPhase.CAMPAIGN_MAP);
+      showCampaignMap();
+      // Auto-save campaign state
+      if (campaignManager.getState().mode === 'ironman') {
+        saveManager.saveCampaign(campaignManager.getState()).catch(e =>
+          console.warn('Campaign auto-save failed', e),
+        );
+      }
+    }
+
+    appMode = 'campaign_ui';
+    currentBattleTerritoryId = null;
+  }
+
+  // --- Campaign UI helpers ---
+  function showCampaignMap(): void {
+    campaignMapScreen.show(campaignManager.getState(), campaignManager.getTerritoryManager());
+  }
+
+  function showCampScreen(): void {
+    campScreen.show(campaignManager.getState(), recruitmentManager, unlockManager);
+  }
+
+  // --- Wire campaign screen callbacks ---
+
+  // NewRunScreen
+  newRunScreen.setOnStart((territoryId, mode) => {
+    newRunScreen.hide();
+    const seed = Date.now();
+    const unlockedTypes = unlockManager.getUnlockedUnitTypes();
+    const startingExp = unlockManager.getStartingExp();
+    campaignManager.startNewRun(seed, territoryId, unlockedTypes, startingExp);
+    // Set mode on state
+    const state = campaignManager.getState();
+    state.mode = mode;
+    campaignManager.transitionTo(CampaignPhase.CAMPAIGN_MAP);
+    showCampaignMap();
+    eventBus.emit('campaign:runStarted', { seed, startTerritoryId: territoryId });
+  });
+
+  // CampaignMapScreen
+  campaignMapScreen.setCallbacks({
+    onCamp: () => {
+      campaignMapScreen.hide();
+      campaignManager.transitionTo(CampaignPhase.CAMP);
+      showCampScreen();
+    },
+    onAttack: (territoryId: string) => {
+      campaignMapScreen.hide();
+      campaignManager.selectTerritory(territoryId);
+      campaignManager.transitionTo(CampaignPhase.PRE_BATTLE_INTEL);
+
+      const tm = campaignManager.getTerritoryManager();
+      const territory = tm.get(territoryId)!;
+      const readySquads = campaignManager.getPlayerRosterForDeployment();
+
+      // Try to get enemy preview if spy_report was used (for now, always generate)
+      const state = campaignManager.getState();
+      const enemyPreview = enemyArmyGenerator.generate(
+        territory, state.turn, state.territoriesConquered, state.seed,
+      );
+
+      intelScreen.show(territory, readySquads, enemyPreview);
+    },
+    onTerritorySelected: (territoryId: string) => {
+      campaignManager.selectTerritory(territoryId);
+      // Re-render map with selection
+      campaignMapScreen.update(campaignManager.getState(), campaignManager.getTerritoryManager());
+    },
+  });
+
+  // IntelScreen
+  intelScreen.setCallbacks({
+    onDeploy: () => {
+      intelScreen.hide();
+      const territoryId = campaignManager.getState().selectedTerritoryId;
+      if (territoryId) {
+        campaignManager.transitionTo(CampaignPhase.BATTLE);
+        startBattle(territoryId);
+      }
+    },
+    onCancel: () => {
+      intelScreen.hide();
+      campaignManager.transitionTo(CampaignPhase.CAMPAIGN_MAP);
+      showCampaignMap();
+    },
+  });
+
+  // CampScreen
+  campScreen.setCallbacks({
+    onReturnToMap: () => {
+      campScreen.hide();
+      campaignManager.transitionTo(CampaignPhase.CAMPAIGN_MAP);
+      showCampaignMap();
+    },
+    onAdvanceTurn: () => {
+      campaignManager.advanceTurn();
+
+      // Check for random events
+      const state = campaignManager.getState();
+      const eventId = randomEventSystem.rollForEvent(state.seed, state.turn, state);
+      if (eventId) {
+        const def = randomEventSystem.getDefinition(eventId);
+        if (def) {
+          randomEventModal.show(def, (choiceIndex) => {
+            const outcome = randomEventSystem.applyChoice(
+              eventId, choiceIndex, state, campaignManager.getTerritoryManager(),
+            );
+            console.log('Event outcome:', outcome);
+            // Re-render camp with updated state
+            showCampScreen();
+          });
+        }
+      }
+
+      // Auto-save after turn advance
+      if (state.mode === 'ironman') {
+        saveManager.saveCampaign(state).catch(e =>
+          console.warn('Campaign auto-save failed', e),
+        );
+      }
+
+      // Re-render camp
+      showCampScreen();
+    },
+    onRecruit: (type) => {
+      const state = campaignManager.getState();
+      const unlockedTypes = unlockManager.getUnlockedUnitTypes();
+      const check = recruitmentManager.canRecruit(type, state.resources, state.roster, unlockedTypes);
+      if (check.allowed) {
+        const newSquad = recruitmentManager.recruit(type, state, unlockedTypes);
+        if (newSquad) state.roster.squads.push(newSquad);
+      }
+    },
+    onReinforce: (squadId) => {
+      const state = campaignManager.getState();
+      const squad = state.roster.squads.find(s => s.squadId === squadId);
+      if (squad) {
+        const check = recruitmentManager.canReinforce(squad, state.resources);
+        if (check.allowed) {
+          const result = recruitmentManager.reinforce(squad, state.resources);
+          if (result) {
+            state.resources.gold -= result.cost.gold;
+            state.resources.population -= result.cost.population;
+          }
+        }
+      }
+    },
+    onPromote: (squadId) => {
+      const state = campaignManager.getState();
+      const squad = state.roster.squads.find(s => s.squadId === squadId);
+      if (squad) {
+        const check = recruitmentManager.canPromote(squad, state.resources, state.roster);
+        if (check.allowed) {
+          const result = recruitmentManager.promote(squad, state.resources);
+          if (result) {
+            state.resources.gold -= result.cost.gold;
+            state.resources.iron -= result.cost.iron;
+          }
+        }
+      }
+    },
+    onDismiss: (squadId) => {
+      const state = campaignManager.getState();
+      const idx = state.roster.squads.findIndex(s => s.squadId === squadId);
+      if (idx !== -1) {
+        const squad = state.roster.squads[idx];
+        const { goldRecovered } = recruitmentManager.dismiss(squad);
+        state.resources.gold += goldRecovered;
+        state.roster.squads.splice(idx, 1);
+      }
+    },
+    onRest: () => {
+      const state = campaignManager.getState();
+      recruitmentManager.restArmy(state.roster);
+    },
+  });
+
+  // RunSummaryScreen
+  runSummaryScreen.setOnNewRun(() => {
+    runSummaryScreen.hide();
+    // Show new run screen again
+    const tm = campaignManager.getTerritoryManager();
+    newRunScreen.show(tm.getStartingCandidates());
+  });
+
+  // AfterActionReport — wire continue callback for campaign
+  afterActionReport.setOnContinue(() => {
+    onBattleContinue(
+      lastBattleWinnerTeam,
+      lastBattleVictoryType,
+    );
+  });
+
+  // Track battle result for the continue callback
+  let lastBattleWinnerTeam = 0;
+  let lastBattleVictoryType = 0;
+
   // --- Deployment drag state ---
   let dragRosterId: number | null = null;
   let dragActive = false;
@@ -255,31 +737,12 @@ async function main(): Promise<void> {
   let rightDragWorldX = 0;
   let rightDragWorldY = 0;
 
-  // --- Start deployment ---
-  const startingRoster = [
-    { type: UnitType.JI_HALBERDIERS, size: 120, experience: 0 },
-    { type: UnitType.JI_HALBERDIERS, size: 120, experience: 0 },
-    { type: UnitType.DAO_SWORDSMEN, size: 80, experience: 0 },
-    { type: UnitType.NU_CROSSBOWMEN, size: 100, experience: 0 },
-    { type: UnitType.NU_CROSSBOWMEN, size: 100, experience: 0 },
-    { type: UnitType.GONG_ARCHERS, size: 80, experience: 0 },
-    { type: UnitType.LIGHT_CAVALRY, size: 40, experience: 0 },
-    { type: UnitType.GENERAL, size: 1, experience: 50, isGeneral: true },
-  ];
-
-  deploymentManager.startDeployment(startingRoster, terrainGrid, currentTemplateId);
-  deploymentSidebar.show();
-  deploymentSidebar.setRoster(deploymentManager.getRoster());
-
-  const zone = deploymentManager.getZone();
-  if (zone) {
-    deploymentRenderer.renderZone(zone, TILE_SIZE, renderer.pixiRenderer);
-  }
-
   // --- Sim tick ---
   let lastFrameTime = performance.now();
 
   gameLoop.onSimTick((dt) => {
+    if (appMode !== 'battle') return;
+
     gameState.tick(dt);
     const tick = gameState.getState().tickNumber;
 
@@ -339,6 +802,8 @@ async function main(): Promise<void> {
   });
 
   gameLoop.onRender((alpha) => {
+    if (appMode !== 'battle') return;
+
     const now = performance.now();
     const frameDt = now - lastFrameTime;
     lastFrameTime = now;
@@ -434,7 +899,13 @@ async function main(): Promise<void> {
     deploymentSidebar.hide();
     deploymentRenderer.clear();
     gameLoop.resume();
-    spawnEnemyArmy(unitManager);
+
+    // Spawn enemy army: campaign-generated or default
+    if (currentBattleTerritoryId) {
+      spawnCampaignEnemy();
+    } else {
+      spawnDefaultEnemyArmy(unitManager);
+    }
 
     // Initialize supply for both armies (uses SUPPLY_BASE_CAPACITY default)
     supplySystem.initArmy(0);
@@ -469,6 +940,10 @@ async function main(): Promise<void> {
   eventBus.on('battle:ended', ({ winnerTeam, victoryType }) => {
     if (battleEnded) return;
     battleEnded = true;
+
+    // Track for continue callback
+    lastBattleWinnerTeam = winnerTeam;
+    lastBattleVictoryType = victoryType;
 
     // Stop event logging, auto-save, pause, play cinematic, then show report
     battleEventLogger.stopLogging(gameState.getState().tickNumber);
@@ -603,6 +1078,8 @@ async function main(): Promise<void> {
 
   // --- Input: click ---
   eventBus.on('input:click', ({ worldX, worldY, screenX, screenY, shift }) => {
+    if (appMode !== 'battle') return;
+
     // --- Deployment mode ---
     if (deploymentManager.phase === DeploymentPhase.DEPLOYING) {
       // Handle drag drop (place unit)
@@ -735,8 +1212,8 @@ async function main(): Promise<void> {
     }
   });
 
-  // --- Enemy army spawning ---
-  function spawnEnemyArmy(um: UnitManager): void {
+  // --- Default enemy army spawning (non-campaign fallback) ---
+  function spawnDefaultEnemyArmy(um: UnitManager): void {
     const enemyCol = Math.floor(terrainGrid.width * 0.75);
     const centerRow = Math.floor(terrainGrid.height / 2);
     const spacing = 4;
@@ -807,6 +1284,8 @@ async function main(): Promise<void> {
     surrenderSystem, battleEndOverlay, speedControls, pauseMenu, alertSystem, battleHUD,
     hotkeyManager, retreatSystem, codex, battleEventLogger, afterActionReport, battleCinematic,
     saveManager, saveLoadScreen, saveToast,
+    campaignManager, unlockManager, recruitmentManager, enemyArmyGenerator, randomEventSystem,
+    newRunScreen, campaignMapScreen, campScreen, intelScreen,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),
@@ -815,21 +1294,36 @@ async function main(): Promise<void> {
     regen: (newSeed?: number, newTemplate?: string) => {
       const s = newSeed ?? Date.now();
       const t = newTemplate ?? currentTemplateId;
-      const gen = new TerrainGenerator(s);
-      const grid = gen.generate(t);
-      terrainRenderer.bake(grid, renderer.pixiRenderer);
+      regenerateTerrain(s, t);
       console.log(`Regenerated: seed=${s}, template=${t}`);
     },
   };
 
-  console.log(`Alkaid (破军) — Terrain seed: ${currentSeed}, template: ${currentTemplateId}`);
-  console.log('DEPLOYMENT PHASE: Drag units from sidebar to deployment zone');
-  console.log('Right-click placed units to remove them');
-  console.log('Select a formation, then click Begin Battle');
-  console.log('Debug: __alkaid.commandSystem, __alkaid.combatSystem, __alkaid.moraleSystem');
+  // --- Startup Flow ---
+  // Check for existing campaign save
+  const hasCampaign = await saveManager.hasCampaignSave();
+  if (hasCampaign) {
+    const campaignSnapshot = await saveManager.loadCampaign();
+    if (campaignSnapshot) {
+      campaignManager.deserialize(campaignSnapshot.campaignState);
+      console.log('Campaign save loaded — resuming campaign');
+      showCampaignMap();
+    } else {
+      // Corrupted save, start fresh
+      const tm = campaignManager.getTerritoryManager();
+      newRunScreen.show(tm.getStartingCandidates());
+    }
+  } else {
+    // No campaign save — show new run screen
+    const tm = campaignManager.getTerritoryManager();
+    newRunScreen.show(tm.getStartingCandidates());
+  }
+
+  console.log('Alkaid (破军) — Campaign Mode');
+  console.log('Select a starting territory to begin your campaign');
 
   gameLoop.start();
-  gameLoop.pause(); // Start paused for deployment
+  gameLoop.pause(); // Start paused, will resume when battle starts
 }
 
 main().catch((err) => {

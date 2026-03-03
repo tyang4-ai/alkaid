@@ -15,6 +15,7 @@ const VICTORY_LABELS: Record<number, string> = {
 export class AfterActionReport {
   private overlay: HTMLDivElement;
   private _visible = false;
+  private onContinue?: () => void;
 
   constructor(parentElement: HTMLElement) {
     this.overlay = document.createElement('div');
@@ -122,8 +123,18 @@ export class AfterActionReport {
     // Bind continue button
     const continueBtn = this.overlay.querySelector('#aar-continue');
     if (continueBtn) {
-      continueBtn.addEventListener('click', () => window.location.reload());
+      continueBtn.addEventListener('click', () => {
+        if (this.onContinue) {
+          this.onContinue();
+        } else {
+          window.location.reload();
+        }
+      });
     }
+  }
+
+  setOnContinue(cb: () => void): void {
+    this.onContinue = cb;
   }
 
   private buildTimelineSVG(metrics: BattleMetrics): string {

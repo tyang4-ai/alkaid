@@ -48,6 +48,22 @@ export class SaveValidator {
     if (obj.type === 'campaign') {
       if (!obj.campaign || typeof obj.campaign !== 'object') {
         errors.push('Missing "campaign" data for type=campaign');
+      } else {
+        const campaign = obj.campaign as Record<string, unknown>;
+        if (!campaign.campaignState || typeof campaign.campaignState !== 'object') {
+          errors.push('campaign.campaignState must be an object');
+        } else {
+          const cs = campaign.campaignState as Record<string, unknown>;
+          if (typeof cs.runId !== 'string') errors.push('campaign.campaignState.runId must be a string');
+          if (typeof cs.seed !== 'number') errors.push('campaign.campaignState.seed must be a number');
+          if (typeof cs.turn !== 'number') errors.push('campaign.campaignState.turn must be a number');
+          if (!Array.isArray(cs.territories)) errors.push('campaign.campaignState.territories must be an array');
+          if (!cs.roster || typeof cs.roster !== 'object') errors.push('campaign.campaignState.roster must be an object');
+          if (!cs.resources || typeof cs.resources !== 'object') errors.push('campaign.campaignState.resources must be an object');
+        }
+        if (typeof campaign.wasLoaded !== 'boolean') {
+          errors.push('campaign.wasLoaded must be a boolean');
+        }
       }
     }
 

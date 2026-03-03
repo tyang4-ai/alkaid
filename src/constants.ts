@@ -678,7 +678,7 @@ export const UNIT_GROUP_COUNT = 9;
 export const CINEMATIC_DURATION_MS = 3500;
 
 // --- Save System (Step 11) ---
-export const SAVE_VERSION = '1.0.0';
+export const SAVE_VERSION = '1.1.0';
 export const SAVE_AUTO_INTERVAL_MS = 60_000;
 export const SAVE_DB_NAME = 'alkaid-saves';
 export const SAVE_DB_VERSION = 1;
@@ -749,4 +749,3 @@ export const CAMPAIGN_STARTING_GOLD = 300;
 export const CAMPAIGN_STARTING_FOOD = 100;
 export const CAMPAIGN_REINFORCE_COST_MULT = 0.5;
 export const CAMPAIGN_IRONMAN_SLOT_ID = 'ironman-campaign';
-export const CAMPAIGN_SAVE_VERSION = '1.1.0';

@@ -1,11 +1,13 @@
 import type {
   SaveFile, SaveSlotMeta, BattleSnapshot, SaveSystemRefs,
+  CampaignSnapshot,
 } from './SaveTypes';
+import type { CampaignState } from '../campaign/CampaignTypes';
 import { SaveValidator } from './SaveValidator';
 import { migrate } from './MigrationChain';
 import {
   SAVE_VERSION, SAVE_DB_NAME, SAVE_DB_VERSION, SAVE_STORE_NAME,
-  SAVE_EMERGENCY_KEY, SAVE_QUICKSAVE_ID,
+  SAVE_EMERGENCY_KEY, SAVE_QUICKSAVE_ID, CAMPAIGN_IRONMAN_SLOT_ID,
 } from '../../constants';
 
 export class SaveManager {
@@ -256,6 +258,105 @@ export class SaveManager {
     } catch {
       return false;
     }
+  }
+
+  // --- Campaign Save Methods ---
+
+  async saveCampaign(state: CampaignState, activeBattle?: BattleSnapshot): Promise<void> {
+    if (!this.db) throw new Error('SaveManager: DB not initialized');
+
+    const now = Date.now();
+    const slotId = CAMPAIGN_IRONMAN_SLOT_ID;
+
+    const totalTroops = state.roster.squads.reduce((sum, s) => sum + s.size, 0);
+
+    const meta: SaveSlotMeta = {
+      slotId,
+      name: `Campaign T${state.turn}`,
+      timestamp: now,
+      tick: 0,
+      templateId: '',
+      playerTroops: totalTroops,
+      enemyTroops: 0,
+    };
+
+    const campaignSnapshot: CampaignSnapshot = {
+      campaignState: state,
+      activeBattle,
+      wasLoaded: false,
+    };
+
+    const saveFile: SaveFile = {
+      version: SAVE_VERSION,
+      timestamp: now,
+      type: 'campaign',
+      meta,
+      campaign: campaignSnapshot,
+    };
+
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(SAVE_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(SAVE_STORE_NAME);
+      store.put(saveFile);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async loadCampaign(): Promise<CampaignSnapshot | null> {
+    if (!this.db) throw new Error('SaveManager: DB not initialized');
+
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(SAVE_STORE_NAME, 'readonly');
+      const store = tx.objectStore(SAVE_STORE_NAME);
+      const request = store.get(CAMPAIGN_IRONMAN_SLOT_ID);
+      request.onsuccess = () => {
+        const result = request.result as SaveFile | undefined;
+        if (!result || result.type !== 'campaign' || !result.campaign) {
+          resolve(null);
+          return;
+        }
+
+        const validation = SaveValidator.validate(result);
+        if (!validation.valid) {
+          console.warn('SaveManager: Invalid campaign save', validation.errors);
+          resolve(null);
+          return;
+        }
+
+        const migrated = migrate(result as unknown as Record<string, unknown>) as unknown as SaveFile;
+        const snapshot = migrated.campaign!;
+
+        // Ironman: mark as loaded — overwrite with wasLoaded=true
+        snapshot.wasLoaded = true;
+        const writeTx = this.db!.transaction(SAVE_STORE_NAME, 'readwrite');
+        const writeStore = writeTx.objectStore(SAVE_STORE_NAME);
+        migrated.campaign = snapshot;
+        writeStore.put(migrated);
+
+        resolve(snapshot);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteCampaignSave(): Promise<void> {
+    return this.deleteSave(CAMPAIGN_IRONMAN_SLOT_ID);
+  }
+
+  async hasCampaignSave(): Promise<boolean> {
+    if (!this.db) throw new Error('SaveManager: DB not initialized');
+
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(SAVE_STORE_NAME, 'readonly');
+      const store = tx.objectStore(SAVE_STORE_NAME);
+      const request = store.get(CAMPAIGN_IRONMAN_SLOT_ID);
+      request.onsuccess = () => {
+        const result = request.result as SaveFile | undefined;
+        resolve(!!result && result.type === 'campaign');
+      };
+      request.onerror = () => reject(request.error);
+    });
   }
 
   restoreBattle(snapshot: BattleSnapshot): void {

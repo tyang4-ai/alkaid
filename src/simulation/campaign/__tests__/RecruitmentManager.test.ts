@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RecruitmentManager } from '../RecruitmentManager';
-import { UnitType, UnitCategory, UNIT_TYPE_CONFIGS, CAMPAIGN_MAX_SQUADS, CAMPAIGN_MAX_SIEGE, CAMPAIGN_MAX_CAVALRY, CAMPAIGN_MAX_ELITE_GUARD } from '../../../constants';
+import { UnitType, UNIT_TYPE_CONFIGS, CAMPAIGN_MAX_SQUADS, CAMPAIGN_MAX_SIEGE, CAMPAIGN_MAX_CAVALRY, CAMPAIGN_MAX_ELITE_GUARD } from '../../../constants';
 import type { CampaignSquad, Resources, ArmyRoster, CampaignState } from '../CampaignTypes';
 
 function makeResources(overrides: Partial<Resources> = {}): Resources {

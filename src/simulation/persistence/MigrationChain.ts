@@ -1,6 +1,6 @@
-export const CURRENT_SAVE_VERSION = '1.0.0';
+export const CURRENT_SAVE_VERSION = '1.1.0';
 
-const KNOWN_VERSIONS = new Set(['1.0.0']);
+const KNOWN_VERSIONS = new Set(['1.0.0', '1.1.0']);
 
 export function migrate(data: Record<string, unknown>): Record<string, unknown> {
   // Default missing version to current
@@ -17,8 +17,18 @@ export function migrate(data: Record<string, unknown>): Record<string, unknown> 
     );
   }
 
-  // Version migration chain — add migrations here as versions evolve
-  // if (version === '1.0.0') { /* migrate to 1.1.0 */ data.version = '1.1.0'; }
+  // Version migration chain
+  if (version === '1.0.0') {
+    // v1.0.0 → v1.1.0: Add campaign save support
+    // Old battle-only saves don't need campaign data, just bump version
+    if (data.type === 'campaign' && data.campaign) {
+      const campaign = data.campaign as Record<string, unknown>;
+      if (campaign.wasLoaded === undefined) {
+        campaign.wasLoaded = false;
+      }
+    }
+    data.version = '1.1.0';
+  }
 
   return data;
 }

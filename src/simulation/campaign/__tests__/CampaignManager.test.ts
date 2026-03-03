@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CampaignManager } from '../CampaignManager';
 import { EventBus } from '../../../core/EventBus';
 import { CampaignPhase, UnitType, CAMPAIGN_WIN_TERRITORIES } from '../../../constants';
-import type { BattleResult, CampaignState } from '../CampaignTypes';
+import type { BattleResult } from '../CampaignTypes';
 
 function makeBattleResult(overrides: Partial<BattleResult> = {}): BattleResult {
   return {

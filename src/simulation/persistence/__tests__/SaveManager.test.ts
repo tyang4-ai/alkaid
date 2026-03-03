@@ -168,7 +168,7 @@ describe('SaveManager', () => {
     const json = await sm.exportToJSON('export-test');
     expect(json).toBeDefined();
     const parsed = JSON.parse(json!);
-    expect(parsed.version).toBe('1.0.0');
+    expect(parsed.version).toBe('1.1.0');
     expect(parsed.battle.gameState.tickNumber).toBe(2);
   });
 
