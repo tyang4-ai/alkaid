@@ -23,6 +23,10 @@ import { Codex } from './rendering/Codex';
 import { BattleEventLogger } from './simulation/BattleEventLogger';
 import { AfterActionReport } from './rendering/AfterActionReport';
 import { BattleCinematic } from './rendering/BattleCinematic';
+import { SaveToast } from './rendering/SaveToast';
+import { SaveLoadScreen } from './rendering/SaveLoadScreen';
+import { SaveManager } from './simulation/persistence/SaveManager';
+import type { SaveSystemRefs, EnvironmentStateSnapshot } from './simulation/persistence/SaveTypes';
 import { GameLoop } from './core/GameLoop';
 import { GameState } from './simulation/GameState';
 import { TerrainGenerator } from './simulation/terrain/TerrainGenerator';
@@ -48,6 +52,7 @@ import {
   DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, TILE_SIZE,
   UnitType, UnitState, DeploymentPhase, TerrainType, OrderType,
   VictoryType, CAMERA_DRAG_DEAD_ZONE, TimeOfDay,
+  SAVE_AUTO_INTERVAL_MS, SAVE_QUICKSAVE_ID,
 } from './constants';
 import type { FormationType } from './constants';
 
@@ -59,15 +64,15 @@ async function main(): Promise<void> {
   await renderer.init(container);
 
   // Generate terrain
-  const seed = Date.now();
-  const templateId = 'river_valley';
-  const terrainGen = new TerrainGenerator(seed);
-  const terrainGrid = terrainGen.generate(templateId);
+  let currentSeed = Date.now();
+  let currentTemplateId = 'river_valley';
+  const terrainGen = new TerrainGenerator(currentSeed);
+  let terrainGrid = terrainGen.generate(currentTemplateId);
 
   // Render terrain
   const terrainRenderer = new TerrainRenderer(renderer.terrainLayer);
   terrainRenderer.bake(terrainGrid, renderer.pixiRenderer);
-  eventBus.emit('terrain:generated', { seed, templateId });
+  eventBus.emit('terrain:generated', { seed: currentSeed, templateId: currentTemplateId });
 
   // Units
   const unitManager = new UnitManager();
@@ -100,7 +105,7 @@ async function main(): Promise<void> {
   const unitInfoPanel = new UnitInfoPanel(container);
 
   // Environment Systems (Step 9b)
-  const weatherSystem = new WeatherSystem(seed);
+  const weatherSystem = new WeatherSystem(currentSeed);
   const timeOfDaySystem = new TimeOfDaySystem(TimeOfDay.DAWN);
   const environmentHUD = new EnvironmentHUD(container);
   let environmentState: EnvironmentState | null = null;
@@ -156,6 +161,87 @@ async function main(): Promise<void> {
     }
   });
 
+  // --- Save System (Step 11) ---
+  const saveRefs: SaveSystemRefs = {
+    gameState, unitManager, orderManager, supplySystem, surrenderSystem,
+    commandSystem, weatherSystem, timeOfDaySystem, deploymentManager,
+    retreatSystem, battleEventLogger,
+    getEnvironmentState: () => environmentState
+      ? { weather: environmentState.weather, timeOfDay: environmentState.timeOfDay,
+          windDirection: environmentState.windDirection, visibility: 1 }
+      : { weather: 0, timeOfDay: 0, windDirection: 0, visibility: 1 },
+    setEnvironmentState: (s: EnvironmentStateSnapshot) => {
+      if (environmentState) {
+        environmentState.weather = s.weather;
+        environmentState.timeOfDay = s.timeOfDay;
+        environmentState.windDirection = s.windDirection;
+      }
+    },
+    getBattleStartTick: () => battleStartTick,
+    setBattleStartTick: (t: number) => { battleStartTick = t; },
+    getBattleEnded: () => battleEnded,
+    setBattleEnded: (e: boolean) => { battleEnded = e; },
+    getTerrainSeed: () => currentSeed,
+    getTemplateId: () => currentTemplateId,
+  };
+
+  const saveManager = new SaveManager(saveRefs);
+  await saveManager.initDB();
+  const saveLoadScreen = new SaveLoadScreen(container, saveManager, eventBus);
+  const saveToast = new SaveToast(container, eventBus);
+
+  // Wire PauseMenu save callbacks
+  pauseMenu.setSaveCallbacks({
+    onQuickSave: async () => {
+      eventBus.emit('save:started', { type: 'quick' });
+      try {
+        await saveManager.quickSave();
+        eventBus.emit('save:completed', { type: 'quick', success: true });
+      } catch (e) {
+        eventBus.emit('save:error', { message: String(e) });
+      }
+    },
+    onQuickLoad: async () => {
+      const snapshot = await saveManager.loadBattle(SAVE_QUICKSAVE_ID);
+      if (snapshot) {
+        saveManager.restoreBattle(snapshot);
+        eventBus.emit('save:loaded', { slotId: SAVE_QUICKSAVE_ID });
+        eventBus.emit('game:resumed', undefined);
+      }
+    },
+    onSaveGame: () => {
+      saveLoadScreen.show('save');
+    },
+    onLoadGame: () => {
+      saveLoadScreen.show('load');
+    },
+  });
+
+  // Wire SaveLoadScreen load callback
+  saveLoadScreen.setCallbacks(
+    async (slotId: string) => {
+      const snapshot = await saveManager.loadBattle(slotId);
+      if (snapshot) {
+        saveManager.restoreBattle(snapshot);
+        eventBus.emit('save:loaded', { slotId });
+        eventBus.emit('game:resumed', undefined);
+      }
+    },
+    () => {
+      // onClose: return to pause menu
+    },
+  );
+
+  // Emergency save on page unload
+  saveManager.registerBeforeUnload();
+
+  // Check for emergency save recovery on startup
+  const emergencySnapshot = saveManager.loadEmergency();
+  if (emergencySnapshot) {
+    console.log('Emergency save detected — restoring...');
+    saveManager.restoreBattle(emergencySnapshot);
+  }
+
   // --- Deployment drag state ---
   let dragRosterId: number | null = null;
   let dragActive = false;
@@ -181,7 +267,7 @@ async function main(): Promise<void> {
     { type: UnitType.GENERAL, size: 1, experience: 50, isGeneral: true },
   ];
 
-  deploymentManager.startDeployment(startingRoster, terrainGrid, templateId);
+  deploymentManager.startDeployment(startingRoster, terrainGrid, currentTemplateId);
   deploymentSidebar.show();
   deploymentSidebar.setRoster(deploymentManager.getRoster());
 
@@ -374,6 +460,9 @@ async function main(): Promise<void> {
     battleHUD.show();
     battleEventLogger.startLogging(battleStartTick);
     hotkeyManager.setBattleActive(true);
+
+    // Step 11: Start auto-save during battle
+    saveManager.startAutoSave(SAVE_AUTO_INTERVAL_MS);
   });
 
   // --- Battle end handler (Step 9c) ---
@@ -381,8 +470,9 @@ async function main(): Promise<void> {
     if (battleEnded) return;
     battleEnded = true;
 
-    // Stop event logging, pause, play cinematic, then show report
+    // Stop event logging, auto-save, pause, play cinematic, then show report
     battleEventLogger.stopLogging(gameState.getState().tickNumber);
+    saveManager.stopAutoSave();
     gameLoop.pause();
 
     // Play cinematic then show after-action report
@@ -716,6 +806,7 @@ async function main(): Promise<void> {
     weatherSystem, timeOfDaySystem, environmentHUD, environmentState,
     surrenderSystem, battleEndOverlay, speedControls, pauseMenu, alertSystem, battleHUD,
     hotkeyManager, retreatSystem, codex, battleEventLogger, afterActionReport, battleCinematic,
+    saveManager, saveLoadScreen, saveToast,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),
@@ -723,7 +814,7 @@ async function main(): Promise<void> {
     setSpeed: (s: number) => gameLoop.setSpeed(s),
     regen: (newSeed?: number, newTemplate?: string) => {
       const s = newSeed ?? Date.now();
-      const t = newTemplate ?? templateId;
+      const t = newTemplate ?? currentTemplateId;
       const gen = new TerrainGenerator(s);
       const grid = gen.generate(t);
       terrainRenderer.bake(grid, renderer.pixiRenderer);
@@ -731,7 +822,7 @@ async function main(): Promise<void> {
     },
   };
 
-  console.log(`Alkaid (破军) — Terrain seed: ${seed}, template: ${templateId}`);
+  console.log(`Alkaid (破军) — Terrain seed: ${currentSeed}, template: ${currentTemplateId}`);
   console.log('DEPLOYMENT PHASE: Drag units from sidebar to deployment zone');
   console.log('Right-click placed units to remove them');
   console.log('Select a formation, then click Begin Battle');
