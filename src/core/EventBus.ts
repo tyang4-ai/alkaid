@@ -92,6 +92,10 @@ export interface GameEvents {
   'campaign:runEnded': { won: boolean; territoriesConquered: number; pointsEarned: number };
   'campaign:battleStarting': { territoryId: string };
   'campaign:battleComplete': { won: boolean; victoryType: number };
+
+  // Fog of War (Step 13)
+  'fow:tileRevealed': { tileX: number; tileY: number };
+  'fow:visibilityChanged': { previouslyVisible: number; nowVisible: number };
 }
 
 type EventKey = keyof GameEvents;

@@ -578,6 +578,21 @@ export const NIGHT_VETERAN_EXP_THRESHOLD = 60;
 export const NIGHT_FRIENDLY_FIRE_CHANCE = 0.05;
 export const NIGHT_FIRE_MORALE_MULT = 1.30;
 
+// --- Fog of War (Step 13) ---
+export const FOW_BASE_VISION_TILES = 5;
+export const FOW_SCOUT_STEALTH_RANGE = 2;
+export const FOW_HILL_ELEVATION_BONUS = 0.5;
+export const FOW_TICK_RECOMPUTE_INTERVAL = 4;
+export const FOW_DIRTY_MOVE_THRESHOLD_TILES = 1.0;
+export const FOW_VISION_MULTIPLIERS: Partial<Record<UnitType, number>> = {
+  [UnitType.SCOUTS]: 3,
+  [UnitType.LIGHT_CAVALRY]: 2,
+};
+export const FOW_TERRAIN_BLOCKS_LOS: Partial<Record<TerrainType, boolean>> = {
+  [TerrainType.FOREST]: true,
+  [TerrainType.MOUNTAINS]: true,
+};
+
 // --- Fatigue (Step 9a) ---
 export const FATIGUE_MARCH_PER_TICK = 1;
 export const FATIGUE_FIGHTING_PER_TICK = 3;

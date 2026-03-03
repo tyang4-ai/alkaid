@@ -26,6 +26,12 @@ export interface SaveSlotMeta {
   enemyTroops: number;
 }
 
+// --- Fog of War Snapshot (Step 13) ---
+
+export interface FogOfWarSnapshot {
+  tiles: number[];
+}
+
 // --- Battle Snapshot ---
 
 export interface BattleSnapshot {
@@ -46,6 +52,7 @@ export interface BattleSnapshot {
   battleEventLogger: BattleEventLoggerSnapshot;
   battleStartTick: number;
   battleEnded: boolean;
+  fogOfWar?: FogOfWarSnapshot;
 }
 
 // --- Per-System Snapshots ---
@@ -223,4 +230,5 @@ export interface SaveSystemRefs {
   setBattleEnded: (e: boolean) => void;
   getTerrainSeed: () => number;
   getTemplateId: () => string;
+  fogOfWar?: { serialize(): FogOfWarSnapshot; deserialize(data: FogOfWarSnapshot): void; reset(): void };
 }
