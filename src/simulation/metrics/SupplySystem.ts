@@ -2,6 +2,8 @@ import type { UnitManager } from '../units/UnitManager';
 import type { TerrainGrid } from '../terrain/TerrainGrid';
 import type { EnvironmentState } from '../environment/EnvironmentState';
 import { eventBus } from '../../core/EventBus';
+import type { Serializable } from '../persistence/Serializable';
+import type { SupplySnapshot } from '../persistence/SaveTypes';
 import {
   UnitState, TILE_SIZE, TERRAIN_STATS,
   SUPPLY_BASE_CAPACITY,
@@ -26,7 +28,7 @@ interface ArmySupply {
   starvationTicks: number;
 }
 
-export class SupplySystem {
+export class SupplySystem implements Serializable<SupplySnapshot> {
   private armies = new Map<number, ArmySupply>();
   private terrainGrid: TerrainGrid;
 
@@ -150,6 +152,21 @@ export class SupplySystem {
         foodPercent: foodPct,
         starvationTicks: army.starvationTicks,
       });
+    }
+  }
+
+  serialize(): SupplySnapshot {
+    const armies: SupplySnapshot['armies'] = [];
+    for (const [team, army] of this.armies) {
+      armies.push({ team, food: army.food, maxFood: army.maxFood, starvationTicks: army.starvationTicks });
+    }
+    return { armies };
+  }
+
+  deserialize(data: SupplySnapshot): void {
+    this.armies.clear();
+    for (const a of data.armies) {
+      this.armies.set(a.team, { food: a.food, maxFood: a.maxFood, starvationTicks: a.starvationTicks });
     }
   }
 

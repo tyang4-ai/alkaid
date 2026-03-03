@@ -3,6 +3,8 @@ import type { Order, OrderManager } from '../OrderManager';
 import type { UnitManager } from '../units/UnitManager';
 import type { PathManager } from '../pathfinding/PathManager';
 import { eventBus } from '../../core/EventBus';
+import type { Serializable } from '../persistence/Serializable';
+import type { CommandSnapshot } from '../persistence/SaveTypes';
 import {
   OrderType, TILE_SIZE, SIM_TICK_RATE,
   COMMAND_RADIUS_FRACTION, DEFAULT_MAP_WIDTH,
@@ -32,7 +34,7 @@ const MISINTERPRET_MAP: Partial<Record<OrderType, OrderType>> = {
   [OrderType.RALLY]: OrderType.HOLD,
 };
 
-export class CommandSystem {
+export class CommandSystem implements Serializable<CommandSnapshot> {
   private messengers: Messenger[] = [];
   private nextMessengerId = 1;
   private queue: QueuedOrder[] = [];
@@ -255,6 +257,64 @@ export class CommandSystem {
     this.messengers = [];
     this.queue = [];
     this.nextMessengerId = 1;
+  }
+
+  serialize(): CommandSnapshot {
+    return {
+      messengers: this.messengers.map(m => ({
+        id: m.id,
+        sourceX: m.fromX,
+        sourceY: m.fromY,
+        targetUnitId: m.targetUnitId,
+        orderType: m.orderType,
+        x: m.currentX,
+        y: m.currentY,
+        delivered: m.delivered,
+        trail: m.trail.map(t => ({ x: t.x, y: t.y })),
+      })),
+      nextMessengerId: this.nextMessengerId,
+      queue: this.queue.map(q => ({
+        order: {
+          unitId: q.order.unitId,
+          type: q.order.type,
+          targetX: q.order.targetX,
+          targetY: q.order.targetY,
+          targetUnitId: q.order.targetUnitId,
+        },
+        sourceX: 0,
+        sourceY: 0,
+      })),
+    };
+  }
+
+  deserialize(data: CommandSnapshot): void {
+    this.messengers = data.messengers.map(s => ({
+      id: s.id,
+      fromX: s.sourceX,
+      fromY: s.sourceY,
+      targetUnitId: s.targetUnitId,
+      orderType: s.orderType,
+      targetX: s.x,
+      targetY: s.y,
+      orderTargetX: s.x,
+      orderTargetY: s.y,
+      currentX: s.x,
+      currentY: s.y,
+      speed: MESSENGER_SPEED,
+      spawnTick: 0,
+      delivered: s.delivered,
+      trail: s.trail.map(t => ({ x: t.x, y: t.y, tick: 0 })),
+    }));
+    this.nextMessengerId = data.nextMessengerId;
+    this.queue = data.queue.map(q => ({
+      order: {
+        type: q.order.type,
+        unitId: q.order.unitId,
+        targetX: q.order.targetX,
+        targetY: q.order.targetY,
+        targetUnitId: q.order.targetUnitId,
+      },
+    }));
   }
 }
 

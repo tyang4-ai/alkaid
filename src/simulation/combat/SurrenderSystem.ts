@@ -1,6 +1,8 @@
 import { eventBus } from '../../core/EventBus';
 import type { UnitManager } from '../units/UnitManager';
 import type { SupplySystem } from '../metrics/SupplySystem';
+import type { Serializable } from '../persistence/Serializable';
+import type { SurrenderSnapshot } from '../persistence/SaveTypes';
 import {
   UnitState,
   TILE_SIZE,
@@ -32,7 +34,7 @@ export interface SurrenderFactors {
   leadership: number;
 }
 
-export class SurrenderSystem {
+export class SurrenderSystem implements Serializable<SurrenderSnapshot> {
   private teamStates = new Map<number, SurrenderState>();
 
   constructor() {}
@@ -207,5 +209,31 @@ export class SurrenderSystem {
   /** Check if a team has surrendered. */
   hasSurrendered(team: number): boolean {
     return this.teamStates.get(team)?.surrendered ?? false;
+  }
+
+  serialize(): SurrenderSnapshot {
+    const teamStates: SurrenderSnapshot['teamStates'] = [];
+    for (const [team, state] of this.teamStates) {
+      teamStates.push({
+        team,
+        consecutiveHighPressureChecks: state.consecutiveHighPressureChecks,
+        lastPressure: state.lastPressure,
+        surrendered: state.surrendered,
+        startingSoldiers: state.startingSoldiers,
+      });
+    }
+    return { teamStates };
+  }
+
+  deserialize(data: SurrenderSnapshot): void {
+    this.teamStates.clear();
+    for (const s of data.teamStates) {
+      this.teamStates.set(s.team, {
+        consecutiveHighPressureChecks: s.consecutiveHighPressureChecks,
+        lastPressure: s.lastPressure,
+        surrendered: s.surrendered,
+        startingSoldiers: s.startingSoldiers,
+      });
+    }
   }
 }
