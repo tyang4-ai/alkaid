@@ -38,7 +38,7 @@ All design documents are located at:
 - Include brief notes about what was done in the Notes column
 
 ## Superpowers Skills
-**ALWAYS check and use superpowers skills before any task.** Key skills:
+**MANDATORY: ALWAYS invoke superpowers skills before ANY task. This is not optional — skills MUST be used for every task, every time, no exceptions.** Key skills:
 - `superpowers:brainstorming` — before any creative/feature work
 - `superpowers:writing-plans` — before multi-step implementation
 - `superpowers:executing-plans` — when implementing a written plan
