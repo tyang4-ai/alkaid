@@ -392,8 +392,10 @@ async function main(): Promise<void> {
 
     // Ensure renderer is showing battle visuals
     renderer.render(0);
+
+    // Stop any previous loop, then start fresh for this battle
+    gameLoop.stop();
     gameLoop.start();
-    gameLoop.pause(); // Paused for deployment
   }
 
   // --- Spawn campaign enemy army ---
@@ -536,6 +538,8 @@ async function main(): Promise<void> {
       }
     }
 
+    // Stop game loop — not needed during campaign UI
+    gameLoop.stop();
     appMode = 'campaign_ui';
     currentBattleTerritoryId = null;
   }
@@ -874,15 +878,27 @@ async function main(): Promise<void> {
   });
 
   // --- Game state events ---
-  eventBus.on('game:paused', () => gameState.setPaused(true));
+  // Wire pause/resume events to both gameState AND gameLoop
+  eventBus.on('game:paused', () => {
+    gameState.setPaused(true);
+    // Also pause the loop if it wasn't already (handles Space key / SpeedControls)
+    if (gameLoop.running && !gameLoop.paused) {
+      gameLoop._pauseInternal();
+    }
+  });
   eventBus.on('game:resumed', () => {
     gameState.setPaused(false);
+    // Also resume the loop if it was paused
+    if (gameLoop.running && gameLoop.paused) {
+      gameLoop._resumeInternal();
+    }
     // Flush queued orders on unpause
     commandSystem.flushQueue(unitManager, gameState.getState().tickNumber);
   });
-  eventBus.on('speed:changed', ({ multiplier }) =>
-    gameState.setSpeedMultiplier(multiplier),
-  );
+  eventBus.on('speed:changed', ({ multiplier }) => {
+    gameState.setSpeedMultiplier(multiplier);
+    gameLoop._setSpeedInternal(multiplier);
+  });
 
   // --- Deployment countdown start: resume game loop so ticks advance ---
   eventBus.on('deployment:countdownStarted', () => {
@@ -945,10 +961,11 @@ async function main(): Promise<void> {
     lastBattleWinnerTeam = winnerTeam;
     lastBattleVictoryType = victoryType;
 
-    // Stop event logging, auto-save, pause, play cinematic, then show report
+    // Stop event logging, auto-save, pause (internal to avoid showing PauseMenu), play cinematic
     battleEventLogger.stopLogging(gameState.getState().tickNumber);
     saveManager.stopAutoSave();
-    gameLoop.pause();
+    gameLoop._pauseInternal();
+    gameState.setPaused(true);
 
     // Play cinematic then show after-action report
     battleCinematic.play(victoryType).then(() => {
@@ -1322,8 +1339,7 @@ async function main(): Promise<void> {
   console.log('Alkaid (破军) — Campaign Mode');
   console.log('Select a starting territory to begin your campaign');
 
-  gameLoop.start();
-  gameLoop.pause(); // Start paused, will resume when battle starts
+  // Game loop stays stopped during campaign UI — starts when entering battle
 }
 
 main().catch((err) => {

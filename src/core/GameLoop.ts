@@ -52,12 +52,24 @@ export class GameLoop {
     eventBus.emit('game:paused', undefined);
   }
 
+  /** Set paused flag without emitting event (for use when event already fired externally). */
+  _pauseInternal(): void {
+    this._paused = true;
+  }
+
   resume(): void {
     if (!this._running || !this._paused) return;
     this._paused = false;
     this.lastTimestamp = performance.now();
     this.accumulator = 0;
     eventBus.emit('game:resumed', undefined);
+  }
+
+  /** Clear paused flag without emitting event (for use when event already fired externally). */
+  _resumeInternal(): void {
+    this._paused = false;
+    this.lastTimestamp = performance.now();
+    this.accumulator = 0;
   }
 
   togglePause(): void {
@@ -71,6 +83,11 @@ export class GameLoop {
   setSpeed(multiplier: number): void {
     this._speedMultiplier = Math.max(0.25, Math.min(4, multiplier));
     eventBus.emit('speed:changed', { multiplier: this._speedMultiplier });
+  }
+
+  /** Set speed without emitting event (for use when event already fired externally). */
+  _setSpeedInternal(multiplier: number): void {
+    this._speedMultiplier = Math.max(0.25, Math.min(4, multiplier));
   }
 
   stop(): void {

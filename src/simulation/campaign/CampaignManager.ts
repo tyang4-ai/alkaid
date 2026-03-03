@@ -21,6 +21,8 @@ export class CampaignManager implements Serializable<CampaignState> {
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
+    // Initialize with default territories so getStartingCandidates() works pre-run
+    this.territoryManager = new TerritoryManager(createTerritories());
   }
 
   // --- Lifecycle ---
