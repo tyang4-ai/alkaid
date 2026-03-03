@@ -688,3 +688,65 @@ export const SAVE_EMERGENCY_KEY = 'alkaid-emergency';
 export const SAVE_UNLOCKS_KEY = 'alkaid-unlocks';
 export const SAVE_SOFT_LIMIT = 20;
 export const SAVE_QUICKSAVE_ID = 'quicksave';
+
+// --- Campaign System (Step 12) ---
+export const CampaignPhase = {
+  NEW_RUN_SETUP: 0,
+  CAMPAIGN_MAP: 1,
+  CAMP: 2,
+  PRE_BATTLE_INTEL: 3,
+  BATTLE: 4,
+  POST_BATTLE: 5,
+  RUN_OVER: 6,
+} as const;
+export type CampaignPhase = (typeof CampaignPhase)[keyof typeof CampaignPhase];
+
+export const CampaignTerritoryType = {
+  FARMING_PLAINS: 0,
+  TRADE_CITY: 1,
+  HORSE_PLAINS: 2,
+  IRON_MOUNTAINS: 3,
+  RIVER_PORT: 4,
+  FOREST_REGION: 5,
+  CAPITAL_CITY: 6,
+  FRONTIER_FORT: 7,
+} as const;
+export type CampaignTerritoryType = (typeof CampaignTerritoryType)[keyof typeof CampaignTerritoryType];
+
+export const TERRITORY_RESOURCE_GENERATION: Record<number, { gold: number; population: number; horses: number; iron: number; food: number }> = {
+  [CampaignTerritoryType.FARMING_PLAINS]: { gold: 80,  population: 60,  horses: 0,  iron: 0,  food: 30 },
+  [CampaignTerritoryType.TRADE_CITY]:     { gold: 150, population: 100, horses: 0,  iron: 0,  food: 10 },
+  [CampaignTerritoryType.HORSE_PLAINS]:   { gold: 40,  population: 30,  horses: 20, iron: 0,  food: 15 },
+  [CampaignTerritoryType.IRON_MOUNTAINS]: { gold: 60,  population: 20,  horses: 0,  iron: 20, food: 5 },
+  [CampaignTerritoryType.RIVER_PORT]:     { gold: 100, population: 50,  horses: 0,  iron: 5,  food: 25 },
+  [CampaignTerritoryType.FOREST_REGION]:  { gold: 50,  population: 40,  horses: 0,  iron: 10, food: 20 },
+  [CampaignTerritoryType.CAPITAL_CITY]:   { gold: 200, population: 150, horses: 5,  iron: 10, food: 20 },
+  [CampaignTerritoryType.FRONTIER_FORT]:  { gold: 30,  population: 20,  horses: 5,  iron: 5,  food: 10 },
+};
+
+export const RECRUITMENT_COSTS: Record<number, { gold: number; population: number; horses: number; iron: number; trainingTurns: number }> = {
+  [UnitType.JI_HALBERDIERS]:  { gold: 80,  population: 120, horses: 0,  iron: 0,  trainingTurns: 1 },
+  [UnitType.DAO_SWORDSMEN]:   { gold: 100, population: 80,  horses: 0,  iron: 10, trainingTurns: 1 },
+  [UnitType.NU_CROSSBOWMEN]:  { gold: 90,  population: 100, horses: 0,  iron: 5,  trainingTurns: 1 },
+  [UnitType.GONG_ARCHERS]:    { gold: 120, population: 80,  horses: 0,  iron: 0,  trainingTurns: 2 },
+  [UnitType.LIGHT_CAVALRY]:   { gold: 200, population: 40,  horses: 20, iron: 5,  trainingTurns: 2 },
+  [UnitType.HEAVY_CAVALRY]:   { gold: 350, population: 25,  horses: 25, iron: 20, trainingTurns: 3 },
+  [UnitType.HORSE_ARCHERS]:   { gold: 280, population: 30,  horses: 25, iron: 5,  trainingTurns: 3 },
+  [UnitType.SIEGE_ENGINEERS]:  { gold: 500, population: 30,  horses: 0,  iron: 30, trainingTurns: 3 },
+  [UnitType.ELITE_GUARD]:     { gold: 400, population: 30,  horses: 0,  iron: 15, trainingTurns: 3 },
+  [UnitType.SCOUTS]:          { gold: 60,  population: 20,  horses: 0,  iron: 0,  trainingTurns: 1 },
+};
+
+export const CAMPAIGN_MAX_SQUADS = 15;
+export const CAMPAIGN_MAX_SIEGE = 3;
+export const CAMPAIGN_MAX_CAVALRY = 5;
+export const CAMPAIGN_MAX_ELITE_GUARD = 1;
+export const CAMPAIGN_WIN_TERRITORIES = 15;
+export const CAMPAIGN_RANDOM_EVENT_CHANCE = 0.10;
+export const CAMPAIGN_DIFFICULTY_GARRISON_SCALE = 0.05;
+export const CAMPAIGN_DIFFICULTY_EXP_SCALE = 2;
+export const CAMPAIGN_STARTING_GOLD = 300;
+export const CAMPAIGN_STARTING_FOOD = 100;
+export const CAMPAIGN_REINFORCE_COST_MULT = 0.5;
+export const CAMPAIGN_IRONMAN_SLOT_ID = 'ironman-campaign';
+export const CAMPAIGN_SAVE_VERSION = '1.1.0';

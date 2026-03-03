@@ -81,6 +81,17 @@ export interface GameEvents {
   'save:completed': { type: string; success: boolean };
   'save:loaded': { slotId: string };
   'save:error': { message: string };
+
+  // Campaign system (Step 12)
+  'campaign:phaseChanged': { oldPhase: number; newPhase: number };
+  'campaign:territoryConquered': { territoryId: string; turn: number };
+  'campaign:turnAdvanced': { turn: number };
+  'campaign:resourcesChanged': { resources: { gold: number; population: number; horses: number; iron: number; food: number } };
+  'campaign:eventTriggered': { eventId: string };
+  'campaign:runStarted': { seed: number; startTerritoryId: string };
+  'campaign:runEnded': { won: boolean; territoriesConquered: number; pointsEarned: number };
+  'campaign:battleStarting': { territoryId: string };
+  'campaign:battleComplete': { won: boolean; victoryType: number };
 }
 
 type EventKey = keyof GameEvents;
