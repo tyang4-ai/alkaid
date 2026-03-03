@@ -13,7 +13,6 @@ import { BattleEventLogger } from '../../BattleEventLogger';
 import { EventBus } from '../../../core/EventBus';
 import { UnitType, OrderType, UnitState, DeploymentPhase, TimeOfDay } from '../../../constants';
 import type { GameStateSnapshot, OrderSnapshot, SupplySnapshot, SurrenderSnapshot, CommandSnapshot, WeatherSnapshot, TimeOfDaySnapshot, DeploymentSnapshot, RetreatSnapshot, BattleEventLoggerSnapshot } from '../SaveTypes';
-import type { UnitSnapshot } from '../SaveTypes';
 import { TerrainGrid } from '../../terrain/TerrainGrid';
 
 // --- GameState serialization ---

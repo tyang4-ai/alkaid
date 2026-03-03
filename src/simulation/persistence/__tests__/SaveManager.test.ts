@@ -13,7 +13,7 @@ import { DeploymentManager } from '../../deployment/DeploymentManager';
 import { RetreatSystem } from '../../RetreatSystem';
 import { BattleEventLogger } from '../../BattleEventLogger';
 import { EventBus } from '../../../core/EventBus';
-import { TerrainGrid, type TerrainGridData } from '../../terrain/TerrainGrid';
+import { TerrainGrid } from '../../terrain/TerrainGrid';
 import { UnitType, DeploymentPhase } from '../../../constants';
 import type { SaveSystemRefs, EnvironmentStateSnapshot } from '../SaveTypes';
 import { SAVE_QUICKSAVE_ID } from '../../../constants';
