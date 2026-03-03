@@ -89,3 +89,4 @@ Follow the numbered steps in the main plan sequentially. Each step has a **Verif
 - **No force-push to `main`** — ever
 - **Tag releases** at phase boundaries (e.g., `v0.1-core-engine`, `v0.2-mechanics`)
 - **Push regularly** — push after each completed step or meaningful milestone
+- **Commit cadence:** Commit after every sub-step (e.g., 12a, 12b, 12c) or every 5 tasks, whichever comes first. Do NOT accumulate large uncommitted changes.
