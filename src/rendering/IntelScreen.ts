@@ -22,9 +22,9 @@ export class IntelScreen {
     document.body.appendChild(this.overlay);
   }
 
-  show(territory: Territory, readySquads: CampaignSquad[], enemyPreview?: EnemySquadDef[]): void {
+  show(territory: Territory, readySquads: CampaignSquad[], enemyPreview?: EnemySquadDef[], playerHasScouts?: boolean): void {
     this.overlay.style.display = 'flex';
-    this.render(territory, readySquads, enemyPreview);
+    this.render(territory, readySquads, enemyPreview, playerHasScouts);
   }
 
   hide(): void {
@@ -40,7 +40,7 @@ export class IntelScreen {
     this.overlay.remove();
   }
 
-  private render(territory: Territory, readySquads: CampaignSquad[], enemyPreview?: EnemySquadDef[]): void {
+  private render(territory: Territory, readySquads: CampaignSquad[], enemyPreview?: EnemySquadDef[], playerHasScouts = true): void {
     const totalPlayerTroops = readySquads.reduce((sum, s) => sum + s.size, 0);
 
     const terrainLabel: Record<number, string> = {
@@ -56,8 +56,11 @@ export class IntelScreen {
       </div>`;
     }).join('');
 
-    let enemyHtml = `<div style="color:#555;font-size:12px;">~${territory.garrisonStrength} squads (est.)</div>`;
-    if (enemyPreview) {
+    let enemyHtml = '';
+    if (!enemyPreview) {
+      enemyHtml = `<div style="color:#555;font-size:12px;">~${territory.garrisonStrength} squads (est.)</div>`;
+    } else if (playerHasScouts) {
+      // Full intel — show all types, sizes, exp
       const totalEnemy = enemyPreview.reduce((sum, s) => sum + s.size, 0);
       enemyHtml = enemyPreview.map(s => {
         const config = UNIT_TYPE_CONFIGS[s.type];
@@ -67,6 +70,15 @@ export class IntelScreen {
         </div>`;
       }).join('');
       enemyHtml += `<div style="color:#8B7D3C;font-size:11px;margin-top:4px;">Total: ${totalEnemy}</div>`;
+    } else {
+      // No scouts — partial intel
+      const totalEnemy = enemyPreview.reduce((sum, s) => sum + s.size, 0);
+      enemyHtml = `
+        <div style="color:#D4C4A0;font-size:12px;">${enemyPreview.length} squads (est.)</div>
+        <div style="color:#C75050;font-size:14px;font-weight:bold;">~${totalEnemy} troops</div>
+        <div style="color:#555;font-size:11px;margin-top:4px;">
+          斥候不足 — Deploy scouts for detailed intelligence
+        </div>`;
     }
 
     this.overlay.innerHTML = `

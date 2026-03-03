@@ -68,6 +68,8 @@ import { NewRunScreen } from './rendering/NewRunScreen';
 import { CampaignMapScreen } from './rendering/CampaignMapScreen';
 import { CampScreen } from './rendering/CampScreen';
 import { IntelScreen } from './rendering/IntelScreen';
+import { FogOfWarSystem } from './simulation/FogOfWarSystem';
+import { FogOfWarRenderer } from './rendering/FogOfWarRenderer';
 import { RandomEventModal } from './rendering/RandomEventModal';
 import { ClemencyModal } from './rendering/ClemencyModal';
 import { RunSummaryScreen } from './rendering/RunSummaryScreen';
@@ -114,6 +116,10 @@ async function main(): Promise<void> {
   // Combat System (Step 8, mutable — terrain-dependent)
   let combatSystem = new CombatSystem(terrainGrid);
   const moraleSystem = new MoraleSystem();
+
+  // Fog of War (Step 13, mutable — terrain-dependent)
+  let fogOfWarSystem = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
+  const fogOfWarRenderer = new FogOfWarRenderer(renderer.fogLayer, renderer.pixiRenderer, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
 
   // Metrics Systems (Step 9a, mutable — terrain-dependent)
   let fatigueSystem = new FatigueSystem(terrainGrid);
@@ -202,6 +208,7 @@ async function main(): Promise<void> {
     setBattleEnded: (e: boolean) => { battleEnded = e; },
     getTerrainSeed: () => currentSeed,
     getTemplateId: () => currentTemplateId,
+    fogOfWar: fogOfWarSystem,
   };
 
   const saveManager = new SaveManager(saveRefs);
@@ -298,6 +305,8 @@ async function main(): Promise<void> {
     combatSystem = new CombatSystem(terrainGrid);
     fatigueSystem = new FatigueSystem(terrainGrid);
     supplySystem = new SupplySystem(terrainGrid);
+    fogOfWarSystem = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
+    fogOfWarRenderer.clear();
   }
 
   // --- Reset battle state between campaigns ---
@@ -316,6 +325,8 @@ async function main(): Promise<void> {
     battleEnded = false;
     battleStartTick = 0;
     environmentState = null;
+    fogOfWarSystem.reset();
+    fogOfWarRenderer.clear();
 
     // Reset game state (tick counter etc.)
     gameState.deserialize({ tickNumber: 0, paused: true, speedMultiplier: 1, battleTimeTicks: 0 });
@@ -592,7 +603,8 @@ async function main(): Promise<void> {
         territory, state.turn, state.territoriesConquered, state.seed,
       );
 
-      intelScreen.show(territory, readySquads, enemyPreview);
+      const playerHasScouts = readySquads.some(s => s.type === UnitType.SCOUTS);
+      intelScreen.show(territory, readySquads, enemyPreview, playerHasScouts);
     },
     onTerritorySelected: (territoryId: string) => {
       campaignManager.selectTerritory(territoryId);
@@ -766,6 +778,9 @@ async function main(): Promise<void> {
         timeOfDaySystem.tick(environmentState);
       }
 
+      // Fog of War (Step 13) — before supply so FOW state is fresh for current tick
+      fogOfWarSystem.tick(tick, unitManager.getByTeam(0), unitManager.getByTeam(1), environmentState);
+
       supplySystem.tick(unitManager, environmentState ?? undefined);
       fatigueSystem.tick(unitManager, orderManager, supplySystem.getAllFoodPercents(), environmentState ?? undefined);
       combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem, supplySystem.getAllFoodPercents(), environmentState ?? undefined);
@@ -816,7 +831,8 @@ async function main(): Promise<void> {
     camera.update(frameDt);
     renderer.applyCamera(camera);
 
-    unitRenderer.update(unitManager.getAll(), alpha);
+    unitRenderer.update(unitManager.getAll(), alpha, fogOfWarSystem.getVisibleEnemyIds());
+    fogOfWarRenderer.update(fogOfWarSystem);
     selectionRenderer.update(
       selectionManager, (id) => unitManager.get(id), alpha, frameDt,
       inputManager.boxSelectRect,

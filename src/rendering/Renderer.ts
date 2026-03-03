@@ -7,6 +7,7 @@ export class Renderer {
   public worldContainer!: Container;
   public terrainLayer!: Container;
   public unitLayer!: Container;
+  public fogLayer!: Container;
   public effectLayer!: Container;
   public uiLayer!: Container;
   private fpsText!: Text;
@@ -49,6 +50,7 @@ export class Renderer {
     this.worldContainer = new Container();
     this.terrainLayer = new Container();
     this.unitLayer = new Container();
+    this.fogLayer = new Container();
     this.effectLayer = new Container();
     this.uiLayer = new Container();
 
@@ -56,6 +58,7 @@ export class Renderer {
     this.worldContainer.addChild(
       this.terrainLayer,
       this.unitLayer,
+      this.fogLayer,
       this.effectLayer,
     );
 

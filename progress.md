@@ -1,6 +1,6 @@
 # Alkaid (破军) — Implementation Progress
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 ## Phase 1: Core Engine
 
@@ -34,7 +34,7 @@ Last updated: 2026-03-02
 |------|-------------|--------|-------|
 | 11 | Save system | DONE | Serializable<T> interface on all 11 systems, SaveManager (IndexedDB + localStorage), SaveValidator, MigrationChain, SaveLoadScreen (Civ 6-style), PauseMenu save buttons, SaveToast, auto-save, emergency crash recovery, export/import JSON. 32 new tests (450 total). Visual testing pending (Chrome MCP unavailable). |
 | 12 | Campaign map + recruitment + roguelike | DONE | 20-territory adjacency graph (TerritoryManager + TerritoryGraph), CampaignManager state machine (7 phases), RecruitmentManager (recruit/reinforce/promote/dismiss/rest with army limits), UnlockManager (14 permanent meta-progression unlocks in localStorage), EnemyArmyGenerator (difficulty scaling + seeded composition), RandomEventSystem (10 events with choices), 6 campaign UI screens (NewRunScreen, CampaignMapScreen, CampScreen, IntelScreen, RandomEventModal, ClemencyModal, RunSummaryScreen), campaign saves (ironman IndexedDB), main.ts refactored as multi-mode orchestrator (campaign_ui ↔ battle). 168 new tests (618 total). |
-| 13 | Fog of war + scouting | TODO | Vision, LOS, scout detection |
+| 13 | Fog of war + scouting | DONE | FogOfWarSystem (symmetric shadowcasting, 8-octant recursive descent), 3-state visibility (UNEXPLORED/EXPLORED/VISIBLE), dirty-flag optimization (1-tile threshold + 4-tick fallback), vision modifiers (unit type ×3/×2, weather, time of day, hills +50%), terrain LOS blocking (forest/mountains + uphill elevation), scout stealth (detection range 2 tiles, enemy scouts counter), FogOfWarRenderer (RenderTexture bake, version-based skip), UnitRenderer visibility filtering, IntelScreen partial intel without scouts, SaveManager integration. 29 new tests (647 total). |
 
 ## Phase 4: AI Opponent
 

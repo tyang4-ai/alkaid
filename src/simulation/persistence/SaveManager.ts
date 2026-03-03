@@ -56,6 +56,7 @@ export class SaveManager {
       battleEventLogger: this.refs.battleEventLogger.serialize(),
       battleStartTick: this.refs.getBattleStartTick(),
       battleEnded: this.refs.getBattleEnded(),
+      fogOfWar: this.refs.fogOfWar?.serialize(),
     };
   }
 
@@ -374,6 +375,11 @@ export class SaveManager {
     this.refs.setEnvironmentState(snapshot.environment);
     this.refs.setBattleStartTick(snapshot.battleStartTick);
     this.refs.setBattleEnded(snapshot.battleEnded);
+    if (snapshot.fogOfWar && this.refs.fogOfWar) {
+      this.refs.fogOfWar.deserialize(snapshot.fogOfWar);
+    } else if (this.refs.fogOfWar) {
+      this.refs.fogOfWar.reset();
+    }
   }
 
   startAutoSave(intervalMs: number): void {

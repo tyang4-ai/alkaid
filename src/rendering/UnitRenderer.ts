@@ -92,11 +92,20 @@ export class UnitRenderer {
     return TEAM_COLORS.NEUTRAL;
   }
 
-  update(units: IterableIterator<Unit>, alpha: number): void {
+  update(units: IterableIterator<Unit>, alpha: number, visibleEnemyIds?: Set<number>): void {
     const seenIds = new Set<number>();
 
     for (const unit of units) {
       if (unit.state === 5) continue; // DEAD
+
+      // FOW: hide enemy units not in visible tiles
+      if (unit.team !== 0 && visibleEnemyIds && !visibleEnemyIds.has(unit.id)) {
+        const hiddenSprite = this.sprites.get(unit.id);
+        if (hiddenSprite) hiddenSprite.visible = false;
+        seenIds.add(unit.id); // Keep sprite alive, just hidden
+        continue;
+      }
+
       seenIds.add(unit.id);
 
       let sprite = this.sprites.get(unit.id);
@@ -109,6 +118,9 @@ export class UnitRenderer {
         this.unitLayer.addChild(sprite);
         this.sprites.set(unit.id, sprite);
       }
+
+      // Ensure sprite visible (may have been hidden by FOW previously)
+      sprite.visible = true;
 
       // Interpolated position
       const renderX = unit.prevX + (unit.x - unit.prevX) * alpha;
