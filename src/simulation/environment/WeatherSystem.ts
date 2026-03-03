@@ -1,6 +1,8 @@
 import { SeededRandom } from '../../utils/Random';
 import { eventBus } from '../../core/EventBus';
 import type { EnvironmentState } from './EnvironmentState';
+import type { Serializable } from '../persistence/Serializable';
+import type { WeatherSnapshot } from '../persistence/SaveTypes';
 import {
   WeatherType,
   WEATHER_PROBABILITIES,
@@ -18,8 +20,9 @@ const ADJACENT_WEATHER: Record<number, number[]> = {
   [WeatherType.SNOW]: [], // snow never shifts
 };
 
-export class WeatherSystem {
+export class WeatherSystem implements Serializable<WeatherSnapshot> {
   private rng: SeededRandom;
+  private currentWeather = 0;
   private lastShiftTick = 0;
 
   constructor(seed: number) {
@@ -37,6 +40,7 @@ export class WeatherSystem {
         break;
       }
     }
+    this.currentWeather = weather;
     const windDirection = this.rng.nextInt(0, 7);
     return { weather, windDirection };
   }
@@ -51,6 +55,7 @@ export class WeatherSystem {
     if (this.rng.next() < WEATHER_SHIFT_CHANCE) {
       const oldWeather = env.weather;
       env.weather = adjacent[this.rng.nextInt(0, adjacent.length - 1)];
+      this.currentWeather = env.weather;
 
       // If transitioning to wind, pick a new wind direction
       if (env.weather === WeatherType.WIND) {
@@ -63,6 +68,20 @@ export class WeatherSystem {
         tick: env.currentTick,
       });
     }
+  }
+
+  serialize(): WeatherSnapshot {
+    return {
+      currentWeather: this.currentWeather,
+      rngState: this.rng.getState(),
+      ticksSinceLastShift: this.lastShiftTick,
+    };
+  }
+
+  deserialize(data: WeatherSnapshot): void {
+    this.currentWeather = data.currentWeather;
+    this.rng.setState(data.rngState);
+    this.lastShiftTick = data.ticksSinceLastShift;
   }
 
   static getWeatherName(type: number): string {

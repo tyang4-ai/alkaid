@@ -4,8 +4,10 @@ import {
   TimeOfDay,
   TIME_PHASE_DURATION_TICKS,
 } from '../../constants';
+import type { Serializable } from '../persistence/Serializable';
+import type { TimeOfDaySnapshot } from '../persistence/SaveTypes';
 
-export class TimeOfDaySystem {
+export class TimeOfDaySystem implements Serializable<TimeOfDaySnapshot> {
   private startTime: number;
   private lastPhaseChangeTick = 0;
 
@@ -33,6 +35,18 @@ export class TimeOfDaySystem {
   /** Get the start time this system was initialized with. */
   getStartTime(): number {
     return this.startTime;
+  }
+
+  serialize(): TimeOfDaySnapshot {
+    return {
+      startTime: this.startTime,
+      lastPhaseChangeTick: this.lastPhaseChangeTick,
+    };
+  }
+
+  deserialize(data: TimeOfDaySnapshot): void {
+    this.startTime = data.startTime;
+    this.lastPhaseChangeTick = data.lastPhaseChangeTick;
   }
 
   static getTimeName(phase: number): string {

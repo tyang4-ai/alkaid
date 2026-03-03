@@ -2,8 +2,10 @@ import { eventBus } from '../core/EventBus';
 import type { UnitManager } from './units/UnitManager';
 import type { OrderManager } from './OrderManager';
 import { OrderType, UnitState, RETREAT_EVACUATION_TICKS, STALEMATE_DETECTION_TICKS, STALEMATE_CASUALTY_THRESHOLD } from '../constants';
+import type { Serializable } from './persistence/Serializable';
+import type { RetreatSnapshot } from './persistence/SaveTypes';
 
-export class RetreatSystem {
+export class RetreatSystem implements Serializable<RetreatSnapshot> {
   private retreatingTeams = new Set<number>();
   private retreatStartTick = new Map<number, number>();
 
@@ -102,5 +104,20 @@ export class RetreatSystem {
     this.retreatStartTick.clear();
     this.casualtySnapshots.clear();
     this.lastStalemateCheck = 0;
+  }
+
+  serialize(): RetreatSnapshot {
+    return {
+      retreatingTeams: [...this.retreatingTeams],
+      retreatStartTick: [...this.retreatStartTick].map(([team, tick]) => ({ team, tick })),
+      lastStalemateCheck: this.lastStalemateCheck,
+    };
+  }
+
+  deserialize(data: RetreatSnapshot): void {
+    this.retreatingTeams = new Set(data.retreatingTeams);
+    this.retreatStartTick = new Map(data.retreatStartTick.map(e => [e.team, e.tick]));
+    this.lastStalemateCheck = data.lastStalemateCheck;
+    this.casualtySnapshots.clear();
   }
 }

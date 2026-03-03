@@ -2,6 +2,8 @@ import type { EventBus, GameEvents } from '../core/EventBus';
 import type { UnitManager } from './units/UnitManager';
 import type { SupplySystem } from './metrics/SupplySystem';
 import { UnitState } from '../constants';
+import type { Serializable } from './persistence/Serializable';
+import type { BattleEventLoggerSnapshot } from './persistence/SaveTypes';
 
 export interface BattleEvent {
   tick: number;
@@ -29,7 +31,7 @@ const TIME_NAMES: Record<number, string> = {
   0: 'Dawn', 1: 'Morning', 2: 'Midday', 3: 'Afternoon', 4: 'Dusk', 5: 'Night',
 };
 
-export class BattleEventLogger {
+export class BattleEventLogger implements Serializable<BattleEventLoggerSnapshot> {
   private eventBus: EventBus;
   private events: BattleEvent[] = [];
   private moraleHistory: Map<number, number[]> = new Map();
@@ -154,5 +156,39 @@ export class BattleEventLogger {
       casualtyHistory: new Map(this.casualtyHistory),
       sampleInterval: this.sampleInterval,
     };
+  }
+
+  serialize(): BattleEventLoggerSnapshot {
+    return {
+      events: this.events.map(e => ({
+        tick: e.tick,
+        message: e.message,
+        category: e.category,
+        worldX: e.worldX,
+        worldY: e.worldY,
+      })),
+      moraleHistory: [...this.moraleHistory].map(([team, values]) => ({ team, values: [...values] })),
+      supplyHistory: [...this.supplyHistory].map(([team, values]) => ({ team, values: [...values] })),
+      casualtyHistory: [...this.casualtyHistory].map(([team, values]) => ({ team, values: [...values] })),
+      startTick: this.startTick,
+      endTick: this.endTick,
+      sampleInterval: this.sampleInterval,
+    };
+  }
+
+  deserialize(data: BattleEventLoggerSnapshot): void {
+    this.events = data.events.map(e => ({
+      tick: e.tick,
+      message: e.message,
+      category: e.category as BattleEvent['category'],
+      worldX: e.worldX,
+      worldY: e.worldY,
+    }));
+    this.moraleHistory = new Map(data.moraleHistory.map(h => [h.team, [...h.values]]));
+    this.supplyHistory = new Map(data.supplyHistory.map(h => [h.team, [...h.values]]));
+    this.casualtyHistory = new Map(data.casualtyHistory.map(h => [h.team, [...h.values]]));
+    this.startTick = data.startTick;
+    this.endTick = data.endTick;
+    this.sampleInterval = data.sampleInterval;
   }
 }

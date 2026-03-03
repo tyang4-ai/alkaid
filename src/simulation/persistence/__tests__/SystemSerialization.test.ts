@@ -5,8 +5,14 @@ import { OrderManager } from '../../OrderManager';
 import { SupplySystem } from '../../metrics/SupplySystem';
 import { SurrenderSystem } from '../../combat/SurrenderSystem';
 import { CommandSystem } from '../../command/CommandSystem';
-import { UnitType, OrderType, UnitState } from '../../../constants';
-import type { GameStateSnapshot, OrderSnapshot, SupplySnapshot, SurrenderSnapshot, CommandSnapshot } from '../SaveTypes';
+import { WeatherSystem } from '../../environment/WeatherSystem';
+import { TimeOfDaySystem } from '../../environment/TimeOfDaySystem';
+import { DeploymentManager } from '../../deployment/DeploymentManager';
+import { RetreatSystem } from '../../RetreatSystem';
+import { BattleEventLogger } from '../../BattleEventLogger';
+import { EventBus } from '../../../core/EventBus';
+import { UnitType, OrderType, UnitState, DeploymentPhase, TimeOfDay } from '../../../constants';
+import type { GameStateSnapshot, OrderSnapshot, SupplySnapshot, SurrenderSnapshot, CommandSnapshot, WeatherSnapshot, TimeOfDaySnapshot, DeploymentSnapshot, RetreatSnapshot, BattleEventLoggerSnapshot } from '../SaveTypes';
 import type { UnitSnapshot } from '../SaveTypes';
 import { TerrainGrid } from '../../terrain/TerrainGrid';
 
@@ -247,5 +253,126 @@ describe('CommandSystem serialization', () => {
     expect(snapshot2.nextMessengerId).toBe(3);
     expect(snapshot2.queue).toHaveLength(1);
     expect(snapshot2.queue[0].order.type).toBe(OrderType.HOLD);
+  });
+});
+
+// --- WeatherSystem serialization ---
+describe('WeatherSystem serialization', () => {
+  it('round-trips rng state for deterministic continuation', () => {
+    const ws = new WeatherSystem(42);
+    // Advance rng a few times
+    ws.getInitialWeather();
+
+    const snapshot: WeatherSnapshot = ws.serialize();
+    expect(snapshot.rngState).toBeDefined();
+
+    // Create new system and restore
+    const ws2 = new WeatherSystem(999); // different seed
+    ws2.deserialize(snapshot);
+
+    // Both should produce same sequence from this point
+    const snapshot2 = ws2.serialize();
+    expect(snapshot2.rngState).toBe(snapshot.rngState);
+    expect(snapshot2.currentWeather).toBe(snapshot.currentWeather);
+  });
+});
+
+// --- TimeOfDaySystem serialization ---
+describe('TimeOfDaySystem serialization', () => {
+  it('round-trips startTime and lastPhaseChangeTick', () => {
+    const tds = new TimeOfDaySystem(TimeOfDay.MORNING);
+
+    const snapshot: TimeOfDaySnapshot = { startTime: TimeOfDay.MORNING, lastPhaseChangeTick: 150 };
+    tds.deserialize(snapshot);
+
+    const snapshot2 = tds.serialize();
+    expect(snapshot2.startTime).toBe(TimeOfDay.MORNING);
+    expect(snapshot2.lastPhaseChangeTick).toBe(150);
+  });
+});
+
+// --- DeploymentManager serialization ---
+describe('DeploymentManager serialization', () => {
+  it('round-trips battle phase state', () => {
+    const dm = new DeploymentManager();
+
+    const snapshot: DeploymentSnapshot = {
+      phase: DeploymentPhase.BATTLE,
+      battleTicks: 500,
+      reservesSpawned: true,
+    };
+
+    dm.deserialize(snapshot);
+    const snapshot2 = dm.serialize();
+    expect(snapshot2.phase).toBe(DeploymentPhase.BATTLE);
+    expect(snapshot2.battleTicks).toBe(500);
+    expect(snapshot2.reservesSpawned).toBe(true);
+  });
+});
+
+// --- RetreatSystem serialization ---
+describe('RetreatSystem serialization', () => {
+  it('round-trips retreating teams and stalemate check', () => {
+    const rs = new RetreatSystem();
+
+    const snapshot: RetreatSnapshot = {
+      retreatingTeams: [0],
+      retreatStartTick: [{ team: 0, tick: 100 }],
+      lastStalemateCheck: 80,
+    };
+
+    rs.deserialize(snapshot);
+    expect(rs.isRetreating(0)).toBe(true);
+    expect(rs.isRetreating(1)).toBe(false);
+
+    const snapshot2 = rs.serialize();
+    expect(snapshot2.retreatingTeams).toEqual([0]);
+    expect(snapshot2.retreatStartTick).toEqual([{ team: 0, tick: 100 }]);
+    expect(snapshot2.lastStalemateCheck).toBe(80);
+  });
+});
+
+// --- BattleEventLogger serialization ---
+describe('BattleEventLogger serialization', () => {
+  it('round-trips events and history', () => {
+    const eb = new EventBus();
+    const logger = new BattleEventLogger(eb);
+
+    const snapshot: BattleEventLoggerSnapshot = {
+      events: [
+        { tick: 10, message: 'Squad routed', category: 'combat' },
+        { tick: 20, message: 'Supply collapsed for team 1', category: 'supply' },
+      ],
+      moraleHistory: [
+        { team: 0, values: [70, 65, 60] },
+        { team: 1, values: [75, 70, 50] },
+      ],
+      supplyHistory: [
+        { team: 0, values: [100, 95] },
+        { team: 1, values: [100, 80] },
+      ],
+      casualtyHistory: [
+        { team: 0, values: [0, 10] },
+        { team: 1, values: [0, 15] },
+      ],
+      startTick: 0,
+      endTick: 100,
+      sampleInterval: 10,
+    };
+
+    logger.deserialize(snapshot);
+
+    const metrics = logger.getMetrics();
+    expect(metrics.events).toHaveLength(2);
+    expect(metrics.events[0].message).toBe('Squad routed');
+    expect(metrics.moraleHistory.get(0)).toEqual([70, 65, 60]);
+    expect(metrics.moraleHistory.get(1)).toEqual([75, 70, 50]);
+    expect(metrics.startTick).toBe(0);
+    expect(metrics.endTick).toBe(100);
+
+    // Re-serialize
+    const snapshot2 = logger.serialize();
+    expect(snapshot2.events).toHaveLength(2);
+    expect(snapshot2.moraleHistory).toHaveLength(2);
   });
 });

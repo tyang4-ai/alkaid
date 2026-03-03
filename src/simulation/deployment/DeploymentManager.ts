@@ -3,6 +3,8 @@ import {
   DEPLOYMENT_COUNTDOWN_SECONDS, SIM_TICK_RATE,
   UNIT_TYPE_CONFIGS,
 } from '../../constants';
+import type { Serializable } from '../persistence/Serializable';
+import type { DeploymentSnapshot } from '../persistence/SaveTypes';
 import type { UnitType, FormationType } from '../../constants';
 import type { UnitManager } from '../units/UnitManager';
 import type { TerrainGrid } from '../terrain/TerrainGrid';
@@ -18,7 +20,7 @@ export interface RosterInput {
   isGeneral?: boolean;
 }
 
-export class DeploymentManager {
+export class DeploymentManager implements Serializable<DeploymentSnapshot> {
   private _phase: DeploymentPhase = DeploymentPhase.INACTIVE;
   private roster: RosterEntry[] = [];
   private zone: DeploymentZone | null = null;
@@ -286,5 +288,19 @@ export class DeploymentManager {
   /** Find roster entry by placed unit ID (for right-click removal). */
   getRosterByUnitId(unitId: number): RosterEntry | undefined {
     return this.roster.find(e => e.unitId === unitId);
+  }
+
+  serialize(): DeploymentSnapshot {
+    return {
+      phase: this._phase,
+      battleTicks: this.battleTicks,
+      reservesSpawned: this.reservesSpawned,
+    };
+  }
+
+  deserialize(data: DeploymentSnapshot): void {
+    this._phase = data.phase as DeploymentPhase;
+    this.battleTicks = data.battleTicks;
+    this.reservesSpawned = data.reservesSpawned;
   }
 }
