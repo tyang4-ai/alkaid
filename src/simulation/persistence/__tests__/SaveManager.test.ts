@@ -182,4 +182,34 @@ describe('SaveManager', () => {
     expect(snapshot).toBeDefined();
     expect(snapshot!.gameState.tickNumber).toBe(2);
   });
+
+  it('restoreBattle round-trips full game state through save/restore', async () => {
+    // Advance game state to create interesting state
+    refs.gameState.tick(0); refs.gameState.tick(0); // tick=4
+    refs.setBattleStartTick(1);
+    refs.setEnvironmentState({ weather: 2, timeOfDay: 3, windDirection: 180, visibility: 0.5 });
+
+    // Save the current state
+    await sm.saveBattle('restore-test', 'Restore Test');
+
+    // Create a fresh set of refs and a new SaveManager pointing at same DB
+    const freshRefs = createRefs(); // tick=2, defaults
+    const sm2 = new SaveManager(freshRefs);
+    // Share the same DB handle
+    (sm2 as unknown as { db: IDBDatabase | null }).db =
+      (sm as unknown as { db: IDBDatabase | null }).db;
+
+    // Load and restore
+    const snapshot = await sm2.loadBattle('restore-test');
+    expect(snapshot).toBeDefined();
+    sm2.restoreBattle(snapshot!);
+
+    // Verify all systems were restored
+    expect(freshRefs.gameState.getState().tickNumber).toBe(4);
+    expect(freshRefs.getBattleStartTick()).toBe(1);
+    expect(freshRefs.getEnvironmentState().weather).toBe(2);
+    expect(freshRefs.getEnvironmentState().visibility).toBe(0.5);
+    expect([...freshRefs.unitManager.getAll()]).toHaveLength(2);
+    expect(freshRefs.deploymentManager.serialize().phase).toBe(DeploymentPhase.BATTLE);
+  });
 });
