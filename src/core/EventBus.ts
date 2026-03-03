@@ -75,6 +75,12 @@ export interface GameEvents {
   'battle:eventLogged': { tick: number; message: string; worldX?: number; worldY?: number; category: string };
   'cinematic:started': { type: string };
   'cinematic:ended': { type: string };
+
+  // Save system (Step 11)
+  'save:started': { type: 'auto' | 'manual' | 'quick' | 'emergency' };
+  'save:completed': { type: string; success: boolean };
+  'save:loaded': { slotId: string };
+  'save:error': { message: string };
 }
 
 type EventKey = keyof GameEvents;

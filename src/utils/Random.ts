@@ -26,4 +26,14 @@ export class SeededRandom {
   nextFloat(min: number, max: number): number {
     return min + this.next() * (max - min);
   }
+
+  /** Get internal PRNG state for serialization. */
+  getState(): number {
+    return this.state;
+  }
+
+  /** Restore internal PRNG state from serialization. */
+  setState(s: number): void {
+    this.state = s;
+  }
 }

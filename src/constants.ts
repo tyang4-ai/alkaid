@@ -676,3 +676,15 @@ export const UNIT_GROUP_COUNT = 9;
 
 // Cinematic
 export const CINEMATIC_DURATION_MS = 3500;
+
+// --- Save System (Step 11) ---
+export const SAVE_VERSION = '1.0.0';
+export const SAVE_AUTO_INTERVAL_MS = 60_000;
+export const SAVE_DB_NAME = 'alkaid-saves';
+export const SAVE_DB_VERSION = 1;
+export const SAVE_STORE_NAME = 'snapshots';
+export const SAVE_SETTINGS_KEY = 'alkaid-settings';
+export const SAVE_EMERGENCY_KEY = 'alkaid-emergency';
+export const SAVE_UNLOCKS_KEY = 'alkaid-unlocks';
+export const SAVE_SOFT_LIMIT = 20;
+export const SAVE_QUICKSAVE_ID = 'quicksave';
