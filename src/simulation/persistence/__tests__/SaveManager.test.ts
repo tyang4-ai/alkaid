@@ -184,8 +184,9 @@ describe('SaveManager', () => {
   });
 
   it('restoreBattle round-trips full game state through save/restore', async () => {
-    // Advance game state to create interesting state
-    refs.gameState.tick(0); refs.gameState.tick(0); // tick=4
+    // Advance game state to create interesting state (cast to access tick())
+    (refs.gameState as GameState).tick(0);
+    (refs.gameState as GameState).tick(0); // tick=4
     refs.setBattleStartTick(1);
     refs.setEnvironmentState({ weather: 2, timeOfDay: 3, windDirection: 180, visibility: 0.5 });
 
@@ -209,7 +210,7 @@ describe('SaveManager', () => {
     expect(freshRefs.getBattleStartTick()).toBe(1);
     expect(freshRefs.getEnvironmentState().weather).toBe(2);
     expect(freshRefs.getEnvironmentState().visibility).toBe(0.5);
-    expect([...freshRefs.unitManager.getAll()]).toHaveLength(2);
+    expect([...(freshRefs.unitManager as UnitManager).getAll()]).toHaveLength(2);
     expect(freshRefs.deploymentManager.serialize().phase).toBe(DeploymentPhase.BATTLE);
   });
 });
