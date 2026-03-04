@@ -70,6 +70,8 @@ import { CampScreen } from './rendering/CampScreen';
 import { IntelScreen } from './rendering/IntelScreen';
 import { FogOfWarSystem } from './simulation/FogOfWarSystem';
 import { FogOfWarRenderer } from './rendering/FogOfWarRenderer';
+import { AIController } from './simulation/ai/AIController';
+import { AIPersonalityType } from './simulation/ai/AITypes';
 import { RandomEventModal } from './rendering/RandomEventModal';
 import { ClemencyModal } from './rendering/ClemencyModal';
 import { RunSummaryScreen } from './rendering/RunSummaryScreen';
@@ -120,6 +122,10 @@ async function main(): Promise<void> {
   // Fog of War (Step 13, mutable — terrain-dependent)
   let fogOfWarSystem = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
   const fogOfWarRenderer = new FogOfWarRenderer(renderer.fogLayer, renderer.pixiRenderer, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
+
+  // AI System (Step 14, mutable — terrain-dependent)
+  let aiFogOfWar = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
+  let aiController = new AIController(1, AIPersonalityType.BALANCED, currentSeed, aiFogOfWar, terrainGrid);
 
   // Metrics Systems (Step 9a, mutable — terrain-dependent)
   let fatigueSystem = new FatigueSystem(terrainGrid);
@@ -209,6 +215,8 @@ async function main(): Promise<void> {
     getTerrainSeed: () => currentSeed,
     getTemplateId: () => currentTemplateId,
     fogOfWar: fogOfWarSystem,
+    aiController: aiController,
+    aiFogOfWar: aiFogOfWar,
   };
 
   const saveManager = new SaveManager(saveRefs);
@@ -306,6 +314,7 @@ async function main(): Promise<void> {
     fatigueSystem = new FatigueSystem(terrainGrid);
     supplySystem = new SupplySystem(terrainGrid);
     fogOfWarSystem = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
+    aiFogOfWar = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
     fogOfWarRenderer.clear();
   }
 
@@ -326,6 +335,8 @@ async function main(): Promise<void> {
     battleStartTick = 0;
     environmentState = null;
     fogOfWarSystem.reset();
+    aiFogOfWar.reset();
+    aiController.reset();
     fogOfWarRenderer.clear();
 
     // Reset game state (tick counter etc.)
@@ -346,6 +357,15 @@ async function main(): Promise<void> {
     hotkeyManager.setBattleActive(false);
     afterActionReport.hide();
     battleEndOverlay.hide();
+  }
+
+  // --- AI personality per territory (deterministic from territory ID + campaign seed) ---
+  function getAIPersonalityForTerritory(territoryId: string | null, campaignSeed: number): AIPersonalityType {
+    if (!territoryId) return AIPersonalityType.BALANCED;
+    let hash = campaignSeed;
+    for (let i = 0; i < territoryId.length; i++) hash = (hash * 31 + territoryId.charCodeAt(i)) | 0;
+    const types = [AIPersonalityType.AGGRESSIVE, AIPersonalityType.DEFENSIVE, AIPersonalityType.CUNNING, AIPersonalityType.BALANCED] as const;
+    return types[Math.abs(hash) % 4];
   }
 
   // --- Start a battle from campaign ---
@@ -781,6 +801,10 @@ async function main(): Promise<void> {
       // Fog of War (Step 13) — before supply so FOW state is fresh for current tick
       fogOfWarSystem.tick(tick, unitManager.getByTeam(0), unitManager.getByTeam(1), environmentState);
 
+      // AI Fog of War (team 1 perspective — swapped args) + AI decisions (Step 14)
+      aiFogOfWar.tick(tick, unitManager.getByTeam(1), unitManager.getByTeam(0), environmentState);
+      aiController.tick(tick, unitManager, commandSystem, orderManager, supplySystem, environmentState, gameState.getState().paused);
+
       supplySystem.tick(unitManager, environmentState ?? undefined);
       fatigueSystem.tick(unitManager, orderManager, supplySystem.getAllFoodPercents(), environmentState ?? undefined);
       combatSystem.tick(tick, unitManager, pathManager.spatialHash, moraleSystem, supplySystem.getAllFoodPercents(), environmentState ?? undefined);
@@ -957,6 +981,15 @@ async function main(): Promise<void> {
     surrenderSystem.initBattle(unitManager);
     battleStartTick = gameState.getState().tickNumber;
     battleEnded = false;
+
+    // Initialize AI (Step 14)
+    aiFogOfWar = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
+    const aiPersonality = getAIPersonalityForTerritory(
+      currentBattleTerritoryId,
+      campaignManager.getState().seed,
+    );
+    aiController = new AIController(1, aiPersonality, currentSeed + 7777, aiFogOfWar, terrainGrid);
+    aiController.initBattle(unitManager);
 
     // Step 10: Initialize alert system + show battle HUD + start event logging
     alertSystem.init();

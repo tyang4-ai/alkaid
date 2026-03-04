@@ -57,6 +57,8 @@ export class SaveManager {
       battleStartTick: this.refs.getBattleStartTick(),
       battleEnded: this.refs.getBattleEnded(),
       fogOfWar: this.refs.fogOfWar?.serialize(),
+      ai: this.refs.aiController?.serialize(),
+      aiFogOfWar: this.refs.aiFogOfWar?.serialize(),
     };
   }
 
@@ -379,6 +381,16 @@ export class SaveManager {
       this.refs.fogOfWar.deserialize(snapshot.fogOfWar);
     } else if (this.refs.fogOfWar) {
       this.refs.fogOfWar.reset();
+    }
+    if (snapshot.ai && this.refs.aiController) {
+      this.refs.aiController.deserialize(snapshot.ai);
+    } else if (this.refs.aiController) {
+      this.refs.aiController.reset();
+    }
+    if (snapshot.aiFogOfWar && this.refs.aiFogOfWar) {
+      this.refs.aiFogOfWar.deserialize(snapshot.aiFogOfWar);
+    } else if (this.refs.aiFogOfWar) {
+      this.refs.aiFogOfWar.reset();
     }
   }
 

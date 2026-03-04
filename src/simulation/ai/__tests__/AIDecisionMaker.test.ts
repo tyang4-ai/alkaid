@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { AIDecisionMaker } from '../AIDecisionMaker';
 import { PERSONALITY_WEIGHTS } from '../AIPersonality';
 import { AIPersonalityType, TacticalRole, AIPhase } from '../AITypes';
