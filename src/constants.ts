@@ -781,3 +781,47 @@ export const AI_LOW_SIZE_THRESHOLD = 0.4;
 export const AI_CHARGE_RANGE_TILES = 8;
 export const AI_DISENGAGE_LOSS_THRESHOLD = 0.5;
 export const AI_SCOUT_RETREAT_RANGE = 5;
+
+// --- Step 14b: Web Workers ---
+export const PATHFINDING_USE_WORKER = true;
+export const WORKER_PATH_TIMEOUT_MS = 2000;
+
+// --- Step 14c: Minimap ---
+export const MINIMAP_WIDTH = 200;
+export const MINIMAP_HEIGHT = 150;
+export const MINIMAP_MARGIN = 12;
+export const MINIMAP_BG_ALPHA = 0.85;
+export const MINIMAP_VIEWPORT_COLOR = 0xFFFFFF;
+export const MINIMAP_VIEWPORT_ALPHA = 0.6;
+export const MINIMAP_PLAYER_DOT_COLOR = 0x4A90D9;
+export const MINIMAP_ENEMY_DOT_COLOR = 0xC75050;
+export const MINIMAP_DOT_SIZE = 2;
+
+// --- Step 14c: Tooltips ---
+export const TOOLTIP_DELAY_MS = 300;
+export const TOOLTIP_MAX_WIDTH = 280;
+export const TOOLTIP_OFFSET = 12;
+
+// --- Step 14c: Order Queue ---
+export const ORDER_QUEUE_MAX_LENGTH = 8;
+export const ORDER_WAYPOINT_RADIUS = 5;
+export const ORDER_WAYPOINT_COLOR = 0xFFD700;
+
+// --- Step 14d: Replay ---
+export const REPLAY_VERSION = '1.0';
+export const REPLAY_MAX_FRAMES = 50000;
+export const REPLAY_SCRUB_BATCH_SIZE = 100;
+
+// --- Step 14d: Accessibility ---
+export const COLORBLIND_PALETTES = {
+  off: { player: 0x4A90D9, enemy: 0xC75050 },
+  deuteranopia: { player: 0x3B82F6, enemy: 0xF97316 },
+  protanopia: { player: 0x3B82F6, enemy: 0xF97316 },
+  tritanopia: { player: 0x06B6D4, enemy: 0xEF4444 },
+} as const;
+export const UI_SCALE_MIN = 0.75;
+export const UI_SCALE_MAX = 1.50;
+export const UI_SCALE_STEP = 0.05;
+
+// --- Step 14e: Performance Monitor ---
+export const PERF_UPDATE_INTERVAL_MS = 500;

@@ -223,6 +223,27 @@ export interface BattleEventLoggerSnapshot {
   sampleInterval: number;
 }
 
+// --- Replay Snapshot (Step 14d) ---
+
+export interface ReplaySnapshot {
+  version: string;
+  terrainSeed: number;
+  templateId: string;
+  initialUnits: UnitSnapshot[];
+  frames: Array<{
+    tick: number;
+    orders: Array<{
+      unitId: number; orderType: number;
+      targetX: number; targetY: number;
+      targetUnitId?: number; team: number;
+    }>;
+  }>;
+  totalTicks: number;
+  environmentInit: EnvironmentStateSnapshot;
+  aiPersonality: number;
+  aiSeed: number;
+}
+
 // --- Game Settings ---
 
 export interface GameSettings {

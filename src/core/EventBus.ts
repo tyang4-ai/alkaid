@@ -100,6 +100,27 @@ export interface GameEvents {
   // AI System (Step 14)
   'ai:decisionCycle': { team: number; tick: number; phase: number; orderCount: number };
   'ai:phaseChanged': { team: number; oldPhase: number; newPhase: number; tick: number };
+
+  // Step 14c: Minimap
+  'minimap:click': { worldX: number; worldY: number };
+
+  // Step 14c: Order Queue
+  'order:queued': { unitId: number; type: number; queueLength: number };
+
+  // Step 14d: Replay
+  'replay:started': { totalTicks: number };
+  'replay:tick': { currentTick: number; totalTicks: number };
+  'replay:ended': undefined;
+  'replay:scrubTo': { tick: number };
+  'replay:fowToggled': { mode: 'player' | 'enemy' | 'none' };
+
+  // Step 14d: Settings
+  'settings:changed': { key: string; value: unknown };
+  'settings:colorblindChanged': { mode: string };
+  'settings:uiScaleChanged': { scale: number };
+
+  // Step 14e: Performance
+  'perf:toggled': { visible: boolean };
 }
 
 type EventKey = keyof GameEvents;
