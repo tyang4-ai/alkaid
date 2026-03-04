@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { AIPerception } from '../AIPerception';
 import { FogOfWarSystem } from '../../FogOfWarSystem';
 import { TerrainGrid } from '../../terrain/TerrainGrid';
-import type { TerrainGridData } from '../../terrain/TerrainGrid';
-import type { Unit } from '../../units/Unit';
 import { UnitManager } from '../../units/UnitManager';
 import { SupplySystem } from '../../metrics/SupplySystem';
 import { TerrainType, UnitType, UnitState, TILE_SIZE } from '../../../constants';
@@ -37,24 +35,6 @@ function makeGridWithHills(hillTiles: Array<{ x: number; y: number }>): TerrainG
     riverFlow: new Int8Array(size).fill(-1),
     tileBitmask: new Uint8Array(size),
   });
-}
-
-function makeUnit(overrides: Partial<Unit> & { id: number; team: number }): Unit {
-  return {
-    type: UnitType.JI_HALBERDIERS,
-    x: 100, y: 100,
-    prevX: 100, prevY: 100,
-    size: 100, maxSize: 100,
-    hp: 5000, morale: 70, fatigue: 0, supply: 100, experience: 0,
-    state: UnitState.IDLE, facing: 0,
-    path: null, pathIndex: 0, targetX: 0, targetY: 0,
-    isGeneral: false, pendingOrderType: null, pendingOrderTick: 0,
-    attackCooldown: 0, lastAttackTick: 0, hasCharged: false,
-    combatTargetId: -1, combatTicks: 0, siegeSetupTicks: 0,
-    formUpTicks: 0, disengageTicks: 0, orderModifier: null,
-    routTicks: 0, killCount: 0, holdUnderBombardmentTicks: 0, desertionFrac: 0,
-    ...overrides,
-  };
 }
 
 describe('AIPerception', () => {
@@ -167,7 +147,7 @@ describe('AIPerception', () => {
   });
 
   it('general threat detection', () => {
-    const general = um.spawn({ type: UnitType.GENERAL, team: 1, x: 5 * TILE_SIZE, y: 5 * TILE_SIZE, isGeneral: true });
+    um.spawn({ type: UnitType.GENERAL, team: 1, x: 5 * TILE_SIZE, y: 5 * TILE_SIZE, isGeneral: true });
     const enemy = um.spawn({ type: UnitType.LIGHT_CAVALRY, team: 0, x: 6 * TILE_SIZE, y: 5 * TILE_SIZE });
 
     fow.tick(1, um.getByTeam(1), um.getByTeam(0), null);
@@ -188,7 +168,7 @@ describe('AIPerception', () => {
   it('engagement counts: engaged, idle, routing', () => {
     const u1 = um.spawn({ type: UnitType.JI_HALBERDIERS, team: 1, x: 100, y: 100 });
     u1.combatTargetId = 99; // engaged
-    const u2 = um.spawn({ type: UnitType.JI_HALBERDIERS, team: 1, x: 200, y: 100 });
+    um.spawn({ type: UnitType.JI_HALBERDIERS, team: 1, x: 200, y: 100 });
     // u2 is idle (default)
     const u3 = um.spawn({ type: UnitType.JI_HALBERDIERS, team: 1, x: 300, y: 100 });
     u3.state = UnitState.ROUTING;
