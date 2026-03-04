@@ -32,6 +32,25 @@ export interface FogOfWarSnapshot {
   tiles: number[];
 }
 
+// --- AI Snapshot (Step 14) ---
+
+export interface AIRoleAssignmentSnapshot {
+  unitId: number;
+  role: number;
+  targetX?: number;
+  targetY?: number;
+}
+
+export interface AISnapshot {
+  personality: number;
+  team: number;
+  lastDecisionTick: number;
+  phase: number;
+  initialUnitCount: number;
+  rngState: number;
+  roleAssignments: AIRoleAssignmentSnapshot[];
+}
+
 // --- Battle Snapshot ---
 
 export interface BattleSnapshot {
@@ -53,6 +72,8 @@ export interface BattleSnapshot {
   battleStartTick: number;
   battleEnded: boolean;
   fogOfWar?: FogOfWarSnapshot;
+  ai?: AISnapshot;
+  aiFogOfWar?: FogOfWarSnapshot;
 }
 
 // --- Per-System Snapshots ---
@@ -231,4 +252,6 @@ export interface SaveSystemRefs {
   getTerrainSeed: () => number;
   getTemplateId: () => string;
   fogOfWar?: { serialize(): FogOfWarSnapshot; deserialize(data: FogOfWarSnapshot): void; reset(): void };
+  aiController?: { serialize(): AISnapshot; deserialize(data: AISnapshot): void; reset(): void };
+  aiFogOfWar?: { serialize(): FogOfWarSnapshot; deserialize(data: FogOfWarSnapshot): void; reset(): void };
 }

@@ -96,6 +96,10 @@ export interface GameEvents {
   // Fog of War (Step 13)
   'fow:tileRevealed': { tileX: number; tileY: number };
   'fow:visibilityChanged': { previouslyVisible: number; nowVisible: number };
+
+  // AI System (Step 14)
+  'ai:decisionCycle': { team: number; tick: number; phase: number; orderCount: number };
+  'ai:phaseChanged': { team: number; oldPhase: number; newPhase: number; tick: number };
 }
 
 type EventKey = keyof GameEvents;

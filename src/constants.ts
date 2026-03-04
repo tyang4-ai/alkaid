@@ -764,3 +764,20 @@ export const CAMPAIGN_STARTING_GOLD = 300;
 export const CAMPAIGN_STARTING_FOOD = 100;
 export const CAMPAIGN_REINFORCE_COST_MULT = 0.5;
 export const CAMPAIGN_IRONMAN_SLOT_ID = 'ironman-campaign';
+
+// --- AI Opponent (Step 14) ---
+export const AI_TEAM = 1;
+export const AI_DEFAULT_DECISION_INTERVAL = 20;
+export const AI_OPENING_SCOUT_ADVANCE = 20;
+export const AI_GENERAL_SAFE_DISTANCE = 30;
+export const AI_FLANKER_OFFSET_TILES = 20;
+export const AI_RESERVE_DISTANCE = 15;
+export const AI_SUPPLY_RAID_TARGET_COL_FRAC = 0.20;
+export const AI_STRENGTH_FATIGUE_DIVISOR = 200;
+export const AI_THREAT_RADIUS_GENERAL = 15;
+export const AI_THREAT_RADIUS_SUPPLY = 10;
+export const AI_LOW_MORALE_THRESHOLD = 30;
+export const AI_LOW_SIZE_THRESHOLD = 0.4;
+export const AI_CHARGE_RANGE_TILES = 8;
+export const AI_DISENGAGE_LOSS_THRESHOLD = 0.5;
+export const AI_SCOUT_RETREAT_RANGE = 5;
