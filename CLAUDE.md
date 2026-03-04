@@ -50,6 +50,7 @@ All design documents are located at:
 ## Testing Protocol
 - **Vitest** for unit testing core logic (GameLoop, EventBus, GameState, etc.)
 - **Chrome MCP** tools (`mcp__claude-in-chrome__*`) for visual verification and gameplay testing
+- **IMPORTANT: Always call `tabs_context_mcp` first** before using any other Chrome MCP tool at the start of visual testing. This refreshes the connection and avoids "extension not connected" errors. Do NOT skip this step.
 - After each step: navigate to dev server, screenshot, inspect console, test interactions
 - See the main plan for specific Chrome MCP checks per phase
 

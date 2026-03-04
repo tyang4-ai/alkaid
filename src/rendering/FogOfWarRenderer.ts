@@ -6,7 +6,7 @@ import { FogVisibility } from '../simulation/FogOfWarSystem';
 import type { FogOfWarSystem } from '../simulation/FogOfWarSystem';
 import { TILE_SIZE } from '../constants';
 
-const ALPHA_UNEXPLORED = 0.92;
+const ALPHA_UNEXPLORED = 0.5;
 const ALPHA_EXPLORED = 0.55;
 
 export class FogOfWarRenderer {

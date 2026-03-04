@@ -91,8 +91,8 @@ export class AIDecisionMaker {
     rng: SeededRandom,
   ): AIDecision | null {
     if (visibleEnemies.length === 0) {
-      // Advance toward enemy side of map
-      const advanceX = this.getEnemySideX();
+      // Advance toward enemy side of map (staged to avoid pathfinding failure on large maps)
+      const advanceX = this.stagedAdvanceX(unit, this.getEnemySideX());
       return this.moveIfNotAlready(unit, orderManager, OrderType.MOVE, advanceX, unit.y);
     }
 
@@ -207,7 +207,7 @@ export class AIDecisionMaker {
   ): AIDecision | null {
     // In PRESSING phase, reserves commit as attackers
     if (phase === AIPhase.PRESSING) {
-      const advanceX = this.getEnemySideX();
+      const advanceX = this.stagedAdvanceX(unit, this.getEnemySideX());
       return this.moveIfNotAlready(unit, orderManager, OrderType.MOVE, advanceX, unit.y);
     }
 
@@ -242,10 +242,11 @@ export class AIDecisionMaker {
       }
     }
 
-    // Advance toward unexplored areas (enemy side)
-    const scoutX = this.team === 1
-      ? unit.x - 20 * TILE_SIZE  // Team 1 scouts advance left
-      : unit.x + 20 * TILE_SIZE; // Team 0 scouts advance right
+    // Advance toward unexplored areas (enemy side) in stages
+    const scoutTarget = this.stagedAdvanceX(unit, this.getEnemySideX());
+    const minX = Math.floor(this.mapWidth * 0.05) * TILE_SIZE;
+    const maxX = Math.floor(this.mapWidth * 0.95) * TILE_SIZE;
+    const scoutX = Math.max(minX, Math.min(maxX, scoutTarget));
 
     return this.moveIfNotAlready(unit, orderManager, OrderType.MOVE, scoutX, unit.y);
   }
@@ -275,8 +276,9 @@ export class AIDecisionMaker {
       if (weak) return this.attackIfNotAlready(unit, orderManager, OrderType.ATTACK, weak);
     }
 
-    // Move to enemy rear
-    return this.moveIfNotAlready(unit, orderManager, OrderType.MOVE, enemyRearX, assessment.enemyCenter.y);
+    // Move to enemy rear (staged)
+    const stagedRearX = this.stagedAdvanceX(unit, enemyRearX);
+    return this.moveIfNotAlready(unit, orderManager, OrderType.MOVE, stagedRearX, assessment.enemyCenter.y);
   }
 
   // --- GUARD ---
@@ -444,14 +446,22 @@ export class AIDecisionMaker {
 
   private getOwnSideX(): number {
     return this.team === 1
-      ? (this.mapWidth - 2) * TILE_SIZE
-      : 2 * TILE_SIZE;
+      ? Math.floor(this.mapWidth * 0.80) * TILE_SIZE
+      : Math.floor(this.mapWidth * 0.20) * TILE_SIZE;
   }
 
   private getEnemySideX(): number {
     return this.team === 1
-      ? 2 * TILE_SIZE
-      : (this.mapWidth - 2) * TILE_SIZE;
+      ? Math.floor(this.mapWidth * 0.20) * TILE_SIZE
+      : Math.floor(this.mapWidth * 0.80) * TILE_SIZE;
+  }
+
+  /** Advance toward a target in stages of ~25 tiles to avoid pathfinding failures on large maps with obstacles. */
+  private stagedAdvanceX(unit: Unit, targetX: number): number {
+    const maxStepPx = 25 * TILE_SIZE;
+    const dx = targetX - unit.x;
+    if (Math.abs(dx) <= maxStepPx) return targetX;
+    return unit.x + Math.sign(dx) * maxStepPx;
   }
 
   // --- Order deduplication helpers ---
