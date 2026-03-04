@@ -29,7 +29,7 @@ export interface GameEvents {
   'path:notFound': { unitId: number };
   'input:rightDragStart': { worldX: number; worldY: number; screenX: number; screenY: number };
   'input:rightDragMove': { worldX: number; worldY: number; screenX: number; screenY: number };
-  'input:rightDragEnd': { worldX: number; worldY: number; screenX: number; screenY: number };
+  'input:rightDragEnd': { worldX: number; worldY: number; screenX: number; screenY: number; shift: boolean };
 
   // Command system (Step 7)
   'command:messengerSent': { targetUnitId: number; orderType: number };

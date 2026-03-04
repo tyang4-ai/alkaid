@@ -22,6 +22,7 @@ export class UnitRenderer {
   private pixiRenderer: PixiRenderer;
   private textures = new Map<string, Texture>();
   private sprites = new Map<number, Sprite>();
+  private colorOverrides: { player: number; enemy: number } | null = null;
 
   constructor(unitLayer: Container, pixiRenderer: PixiRenderer) {
     this.unitLayer = unitLayer;
@@ -86,7 +87,17 @@ export class UnitRenderer {
     return rt;
   }
 
+  setColorOverrides(player: number, enemy: number): void {
+    this.colorOverrides = { player, enemy };
+    // Clear cached textures so they regenerate with new colors
+    this.clear();
+  }
+
   private teamColor(team: number): number {
+    if (this.colorOverrides) {
+      if (team === 0) return this.colorOverrides.player;
+      if (team === 1) return this.colorOverrides.enemy;
+    }
     if (team === 0) return TEAM_COLORS.PLAYER;
     if (team === 1) return TEAM_COLORS.ENEMY;
     return TEAM_COLORS.NEUTRAL;

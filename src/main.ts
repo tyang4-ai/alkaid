@@ -76,7 +76,20 @@ import { RandomEventModal } from './rendering/RandomEventModal';
 import { ClemencyModal } from './rendering/ClemencyModal';
 import { RunSummaryScreen } from './rendering/RunSummaryScreen';
 
-type AppMode = 'campaign_ui' | 'battle';
+// QoL imports (Steps 14b-14f)
+import { PathWorkerClient } from './workers/PathWorkerClient';
+import { Minimap } from './rendering/Minimap';
+import { TooltipSystem } from './rendering/TooltipSystem';
+import { PerfMonitor } from './rendering/PerfMonitor';
+import { SettingsManager } from './core/SettingsManager';
+import { SettingsScreen } from './rendering/SettingsScreen';
+import { ReplayRecorder } from './simulation/replay/ReplayRecorder';
+import { ReplayPlayer } from './simulation/replay/ReplayPlayer';
+import { ReplayControls } from './rendering/ReplayControls';
+import { OrderQueueRenderer } from './rendering/OrderQueueRenderer';
+import type { ReplaySnapshot } from './simulation/persistence/SaveTypes';
+
+type AppMode = 'campaign_ui' | 'battle' | 'replay';
 
 async function main(): Promise<void> {
   const container = document.getElementById('game-container');
@@ -158,6 +171,19 @@ async function main(): Promise<void> {
   const afterActionReport = new AfterActionReport(container);
   const battleCinematic = new BattleCinematic(container);
 
+  // --- QoL Systems (Steps 14b-14f) ---
+  const settingsManager = new SettingsManager();
+  const settingsScreen = new SettingsScreen(container, settingsManager);
+  const perfMonitor = new PerfMonitor(container);
+  const replayRecorder = new ReplayRecorder();
+  let replayPlayer: ReplayPlayer | null = null;
+  let replayControls: ReplayControls | null = null;
+  let lastReplaySnapshot: ReplaySnapshot | null = null;
+
+  // Web Worker for pathfinding (initialized after terrainGrid)
+  const pathWorkerClient = new PathWorkerClient();
+  pathWorkerClient.initTerrain(terrainGrid.terrain, terrainGrid.width, terrainGrid.height);
+
   // Renderers for command + combat
   const messengerRenderer = new MessengerRenderer(renderer.effectLayer);
   const commandRadiusRenderer = new CommandRadiusRenderer(renderer.effectLayer);
@@ -175,6 +201,12 @@ async function main(): Promise<void> {
   camera.snap();
   const inputManager = new InputManager(camera, renderer.canvas);
 
+  // Minimap, tooltips, order queue renderer (need camera)
+  const minimap = new Minimap(container, camera, mapPixelW, mapPixelH);
+  minimap.bakeTerrainFromGrid(terrainGrid);
+  const tooltipSystem = new TooltipSystem(container, camera);
+  const orderQueueRenderer = new OrderQueueRenderer(container);
+
   const gameState = new GameState();
   const gameLoop = new GameLoop();
 
@@ -184,6 +216,7 @@ async function main(): Promise<void> {
     commandSystem, camera, gameState,
   );
   hotkeyManager.setCodexToggle(() => codex.toggle());
+  hotkeyManager.setPerfMonitorToggle(() => perfMonitor.toggle());
   hotkeyManager.setEscapeAction(() => {
     if (deploymentManager.phase === DeploymentPhase.BATTLE && !battleEnded) {
       pauseMenu.showRetreatConfirm(() => {
@@ -223,6 +256,15 @@ async function main(): Promise<void> {
   await saveManager.initDB();
   const saveLoadScreen = new SaveLoadScreen(container, saveManager, eventBus);
   const saveToast = new SaveToast(container, eventBus);
+
+  // Wire PauseMenu settings toggle
+  pauseMenu.setSettingsToggle(() => {
+    settingsScreen.show(() => {
+      // On close: apply colorblind palette
+      const colors = settingsManager.getTeamColors();
+      unitRenderer.setColorOverrides(colors.player, colors.enemy);
+    });
+  });
 
   // Wire PauseMenu save callbacks
   pauseMenu.setSaveCallbacks({
@@ -308,6 +350,12 @@ async function main(): Promise<void> {
     terrainRenderer.bake(terrainGrid, renderer.pixiRenderer);
     eventBus.emit('terrain:generated', { seed: currentSeed, templateId: currentTemplateId });
 
+    // Update worker terrain data
+    pathWorkerClient.initTerrain(terrainGrid.terrain, terrainGrid.width, terrainGrid.height);
+
+    // Bake minimap terrain
+    minimap.bakeTerrainFromGrid(terrainGrid);
+
     // Recreate terrain-dependent systems
     pathManager = new PathManager(terrainGrid);
     combatSystem = new CombatSystem(terrainGrid);
@@ -341,6 +389,13 @@ async function main(): Promise<void> {
 
     // Reset game state (tick counter etc.)
     gameState.deserialize({ tickNumber: 0, paused: true, speedMultiplier: 1, battleTimeTicks: 0 });
+
+    // Clear QoL visual state
+    minimap.hide();
+    tooltipSystem.destroy();
+    orderQueueRenderer.hide();
+    if (replayControls) { replayControls.destroy(); replayControls = null; }
+    replayPlayer = null;
 
     // Clear visual state
     selectionManager.deselectAll();
@@ -756,6 +811,65 @@ async function main(): Promise<void> {
     );
   });
 
+  // AfterActionReport — wire "Watch Replay" button
+  afterActionReport.setOnWatchReplay(() => {
+    if (!lastReplaySnapshot) return;
+    afterActionReport.hide();
+
+    // Enter replay mode
+    appMode = 'replay';
+    replayPlayer = new ReplayPlayer(lastReplaySnapshot);
+
+    // Reset battle state and re-run from beginning
+    resetBattleSystems();
+    regenerateTerrain(lastReplaySnapshot.terrainSeed, lastReplaySnapshot.templateId);
+
+    // Re-spawn initial units
+    for (const snap of lastReplaySnapshot.initialUnits) {
+      unitManager.spawn({
+        type: snap.type as UnitType,
+        team: snap.team,
+        x: snap.x, y: snap.y,
+        size: snap.size,
+        experience: snap.experience,
+        isGeneral: snap.isGeneral,
+      });
+    }
+
+    // Initialize environment from replay
+    const envInit = lastReplaySnapshot.environmentInit;
+    environmentState = {
+      weather: envInit.weather,
+      windDirection: envInit.windDirection,
+      timeOfDay: envInit.timeOfDay,
+      currentTick: 0,
+      battleStartTime: envInit.timeOfDay,
+    };
+
+    // Initialize systems for replay
+    supplySystem.initArmy(0);
+    supplySystem.initArmy(1);
+    surrenderSystem.initBattle(unitManager);
+    battleStartTick = 0;
+    battleEnded = false;
+
+    // Show replay controls
+    replayControls = new ReplayControls(container);
+    replayControls.show(replayPlayer.getTotalTicks());
+    replayControls.setOnExit(() => {
+      eventBus.emit('replay:ended', undefined);
+    });
+    minimap.show();
+
+    // Start game loop for replay
+    gameState.deserialize({ tickNumber: 0, paused: false, speedMultiplier: 1, battleTimeTicks: 0 });
+    gameLoop.stop();
+    gameLoop.start();
+    gameLoop.resume();
+
+    eventBus.emit('replay:started', { totalTicks: replayPlayer.getTotalTicks() });
+  });
+
   // Track battle result for the continue callback
   let lastBattleWinnerTeam = 0;
   let lastBattleVictoryType = 0;
@@ -777,7 +891,9 @@ async function main(): Promise<void> {
   let lastFrameTime = performance.now();
 
   gameLoop.onSimTick((dt) => {
-    if (appMode !== 'battle') return;
+    if (appMode !== 'battle' && appMode !== 'replay') return;
+
+    perfMonitor.recordTickStart();
 
     gameState.tick(dt);
     const tick = gameState.getState().tickNumber;
@@ -839,13 +955,34 @@ async function main(): Promise<void> {
       }
     }
 
+    // Replay mode: issue recorded orders at the correct tick
+    if (appMode === 'replay' && replayPlayer) {
+      const replayOrders = replayPlayer.getOrdersForTick(tick);
+      for (const ro of replayOrders) {
+        const order = { type: ro.orderType, unitId: ro.unitId, targetX: ro.targetX, targetY: ro.targetY };
+        const unit = unitManager.get(ro.unitId);
+        if (unit) unit.pendingOrderType = ro.orderType;
+        commandSystem.issueOrder(order, unitManager, false);
+      }
+      eventBus.emit('replay:tick', { currentTick: tick, totalTicks: replayPlayer.getTotalTicks() });
+    }
+
     // Unit movement + order effects
     unitManager.tick(dt, pathManager, orderManager);
     deploymentManager.tick(dt, unitManager);
+
+    perfMonitor.recordTickEnd();
+    perfMonitor.setUnitCounts(
+      unitManager.getByTeam(0).filter(u => u.state !== UnitState.DEAD).length +
+      unitManager.getByTeam(1).filter(u => u.state !== UnitState.DEAD).length,
+      unitManager.count,
+    );
   });
 
   gameLoop.onRender((alpha) => {
-    if (appMode !== 'battle') return;
+    if (appMode !== 'battle' && appMode !== 'replay') return;
+
+    perfMonitor.recordFrameStart();
 
     const now = performance.now();
     const frameDt = now - lastFrameTime;
@@ -913,8 +1050,16 @@ async function main(): Promise<void> {
     radialMenu.updateHover(mousePos.x, mousePos.y);
     // Unit Info Panel (updates every frame for live stat bars)
     unitInfoPanel.update(selectionManager, unitManager);
+    // QoL overlays
+    minimap.update(unitManager, fogOfWarSystem, camera);
+    tooltipSystem.update(mouseScreenX, mouseScreenY, unitManager, terrainGrid, fogOfWarSystem);
+    orderQueueRenderer.update(selectionManager, orderManager, unitManager, camera);
+    perfMonitor.update();
+
     renderer.updateFPS(gameLoop.currentFPS, gameLoop.currentTick, unitManager.count);
     renderer.render(alpha);
+
+    perfMonitor.recordFrameEnd();
   });
 
   // --- Game state events ---
@@ -938,6 +1083,21 @@ async function main(): Promise<void> {
   eventBus.on('speed:changed', ({ multiplier }) => {
     gameState.setSpeedMultiplier(multiplier);
     gameLoop._setSpeedInternal(multiplier);
+  });
+
+  // --- Replay exit ---
+  eventBus.on('replay:ended', () => {
+    appMode = 'campaign_ui';
+    replayPlayer = null;
+    if (replayControls) { replayControls.destroy(); replayControls = null; }
+    gameLoop.stop();
+    minimap.hide();
+
+    // Show after-action report again
+    afterActionReport.show(
+      battleEventLogger.getMetrics(), unitManager,
+      lastBattleVictoryType, lastBattleWinnerTeam,
+    );
   });
 
   // --- Deployment countdown start: resume game loop so ticks advance ---
@@ -997,8 +1157,32 @@ async function main(): Promise<void> {
     battleEventLogger.startLogging(battleStartTick);
     hotkeyManager.setBattleActive(true);
 
+    // QoL: Show minimap, start replay recording
+    minimap.show();
+    replayRecorder.startRecording(
+      currentSeed, currentTemplateId,
+      [...unitManager.getByTeam(0), ...unitManager.getByTeam(1)],
+      { weather: environmentState!.weather, timeOfDay: environmentState!.timeOfDay,
+        windDirection: environmentState!.windDirection, visibility: 1 },
+      aiPersonality, currentSeed + 7777,
+    );
+
     // Step 11: Start auto-save during battle
     saveManager.startAutoSave(SAVE_AUTO_INTERVAL_MS);
+  });
+
+  // --- Replay: record delivered orders ---
+  eventBus.on('command:orderDelivered', ({ targetUnitId, orderType }) => {
+    if (appMode !== 'battle' || battleEnded) return;
+    const unit = unitManager.get(targetUnitId);
+    if (!unit) return;
+    const order = orderManager.getOrder(targetUnitId);
+    const tick = gameState.getState().tickNumber - battleStartTick;
+    replayRecorder.recordOrder(
+      tick, targetUnitId, orderType as OrderType,
+      order?.targetX ?? unit.x, order?.targetY ?? unit.y,
+      undefined, unit.team,
+    );
   });
 
   // --- Battle end handler (Step 9c) ---
@@ -1010,8 +1194,9 @@ async function main(): Promise<void> {
     lastBattleWinnerTeam = winnerTeam;
     lastBattleVictoryType = victoryType;
 
-    // Stop event logging, auto-save, pause (internal to avoid showing PauseMenu), play cinematic
+    // Stop event logging, replay recording, auto-save, pause
     battleEventLogger.stopLogging(gameState.getState().tickNumber);
+    lastReplaySnapshot = replayRecorder.stopRecording(gameState.getState().tickNumber - battleStartTick);
     saveManager.stopAutoSave();
     gameLoop._pauseInternal();
     gameState.setPaused(true);
@@ -1260,13 +1445,21 @@ async function main(): Promise<void> {
     rightDragWorldY = worldY;
   });
 
-  eventBus.on('input:rightDragEnd', ({ worldX, worldY }) => {
+  eventBus.on('input:rightDragEnd', ({ worldX, worldY, shift }) => {
     if (deploymentManager.phase === DeploymentPhase.DEPLOYING) return;
     dragArrowRenderer.hide();
     if (selectionManager.count === 0) return;
 
-    for (const id of selectionManager.selectedIds) {
-      issueOrderViaCommand(id, OrderType.MOVE, worldX, worldY);
+    if (shift) {
+      // Shift+right-drag: append to order queue
+      for (const id of selectionManager.selectedIds) {
+        const order = { type: OrderType.MOVE, unitId: id, targetX: worldX, targetY: worldY };
+        orderManager.appendOrder(id, order);
+      }
+    } else {
+      for (const id of selectionManager.selectedIds) {
+        issueOrderViaCommand(id, OrderType.MOVE, worldX, worldY);
+      }
     }
   });
 
@@ -1352,6 +1545,8 @@ async function main(): Promise<void> {
     saveManager, saveLoadScreen, saveToast,
     campaignManager, unlockManager, recruitmentManager, enemyArmyGenerator, randomEventSystem,
     newRunScreen, campaignMapScreen, campScreen, intelScreen,
+    settingsManager, settingsScreen, perfMonitor, minimap, tooltipSystem,
+    orderQueueRenderer, replayRecorder, pathWorkerClient,
     spawnUnit: (type: UnitType, team: number, x: number, y: number) =>
       unitManager.spawn({ type, team, x, y }),
     pause: () => gameLoop.pause(),
@@ -1383,6 +1578,12 @@ async function main(): Promise<void> {
     // No campaign save — show new run screen
     const tm = campaignManager.getTerritoryManager();
     newRunScreen.show(tm.getStartingCandidates());
+  }
+
+  // Apply initial colorblind settings if not 'off'
+  if (settingsManager.get('colorblindMode') !== 'off') {
+    const colors = settingsManager.getTeamColors();
+    unitRenderer.setColorOverrides(colors.player, colors.enemy);
   }
 
   console.log('Alkaid (破军) — Campaign Mode');

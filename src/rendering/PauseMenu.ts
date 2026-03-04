@@ -13,6 +13,7 @@ export class PauseMenu {
   private eventBus: EventBus;
   private onRetreatConfirm: (() => void) | null = null;
   private saveCallbacks: SaveCallbacks | null = null;
+  private onSettingsOpen: (() => void) | null = null;
 
   constructor(parentElement: HTMLElement, eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -81,6 +82,15 @@ export class PauseMenu {
     loadGameBtn.addEventListener('click', () => this.saveCallbacks?.onLoadGame());
     panel.appendChild(loadGameBtn);
 
+    // Settings button
+    const settingsBtn = document.createElement('button');
+    settingsBtn.textContent = 'Settings 設定';
+    this.styleMenuButton(settingsBtn);
+    settingsBtn.style.marginTop = '8px';
+    settingsBtn.style.background = 'rgba(60, 50, 40, 0.8)';
+    settingsBtn.addEventListener('click', () => this.onSettingsOpen?.());
+    panel.appendChild(settingsBtn);
+
     // Divider before menu button
     const divider = document.createElement('div');
     divider.style.cssText = 'width: 100%; height: 1px; background: #8B7D3C; margin: 12px 0; opacity: 0.4;';
@@ -114,6 +124,10 @@ export class PauseMenu {
 
   setSaveCallbacks(callbacks: SaveCallbacks): void {
     this.saveCallbacks = callbacks;
+  }
+
+  setSettingsToggle(fn: () => void): void {
+    this.onSettingsOpen = fn;
   }
 
   show(): void {

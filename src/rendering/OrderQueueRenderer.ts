@@ -100,6 +100,10 @@ export class OrderQueueRenderer {
     this.canvas.height = window.innerHeight;
   };
 
+  hide(): void {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
   destroy(): void {
     window.removeEventListener('resize', this.onResize);
     this.canvas.remove();

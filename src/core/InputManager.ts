@@ -300,7 +300,7 @@ export class InputManager {
         // Right-drag end: emit drag end event
         eventBus.emit('input:rightDragEnd', {
           worldX: world.x, worldY: world.y,
-          screenX, screenY,
+          screenX, screenY, shift: e.shiftKey,
         });
       } else {
         // Quick right-click (no drag): emit click event

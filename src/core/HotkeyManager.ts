@@ -30,6 +30,7 @@ export class HotkeyManager {
   private handleKeyDown: (e: KeyboardEvent) => void;
   private onEscapeAction: (() => void) | null = null;
   private onCodexToggle: (() => void) | null = null;
+  private onPerfMonitorToggle: (() => void) | null = null;
   private _battleActive = false;
 
   constructor(
@@ -60,6 +61,11 @@ export class HotkeyManager {
     this.onCodexToggle = fn;
   }
 
+  setPerfMonitorToggle(fn: () => void): void {
+    this.onPerfMonitorToggle = fn;
+  }
+
+
   setBattleActive(active: boolean): void {
     this._battleActive = active;
   }
@@ -87,6 +93,13 @@ export class HotkeyManager {
       } else if (this.onEscapeAction) {
         this.onEscapeAction();
       }
+      return;
+    }
+
+    // F3: toggle performance monitor
+    if (e.code === 'F3') {
+      e.preventDefault();
+      this.onPerfMonitorToggle?.();
       return;
     }
 

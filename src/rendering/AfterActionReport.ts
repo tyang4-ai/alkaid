@@ -16,6 +16,7 @@ export class AfterActionReport {
   private overlay: HTMLDivElement;
   private _visible = false;
   private onContinue?: () => void;
+  private onWatchReplay?: () => void;
 
   constructor(parentElement: HTMLElement) {
     this.overlay = document.createElement('div');
@@ -111,7 +112,11 @@ export class AfterActionReport {
           </div>
         </div>
 
-        <div style="text-align:center;">
+        <div style="text-align:center;display:flex;gap:12px;justify-content:center;">
+          <button id="aar-replay" style="background:rgba(60,50,40,0.8);color:#D4C4A0;border:1px solid #8B7D3C;
+            padding:10px 32px;border-radius:4px;cursor:pointer;font-size:16px;font-family:serif;">
+            Watch Replay 回放
+          </button>
           <button id="aar-continue" style="background:#8B2500;color:#D4C4A0;border:1px solid #8B7D3C;
             padding:10px 32px;border-radius:4px;cursor:pointer;font-size:16px;font-family:serif;">
             Continue 继续
@@ -119,6 +124,14 @@ export class AfterActionReport {
         </div>
       </div>
     `;
+
+    // Bind replay button
+    const replayBtn = this.overlay.querySelector('#aar-replay');
+    if (replayBtn) {
+      replayBtn.addEventListener('click', () => {
+        this.onWatchReplay?.();
+      });
+    }
 
     // Bind continue button
     const continueBtn = this.overlay.querySelector('#aar-continue');
@@ -135,6 +148,10 @@ export class AfterActionReport {
 
   setOnContinue(cb: () => void): void {
     this.onContinue = cb;
+  }
+
+  setOnWatchReplay(cb: () => void): void {
+    this.onWatchReplay = cb;
   }
 
   private buildTimelineSVG(metrics: BattleMetrics): string {

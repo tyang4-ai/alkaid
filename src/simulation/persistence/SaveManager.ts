@@ -1,6 +1,6 @@
 import type {
   SaveFile, SaveSlotMeta, BattleSnapshot, SaveSystemRefs,
-  CampaignSnapshot,
+  CampaignSnapshot, ReplaySnapshot,
 } from './SaveTypes';
 import type { CampaignState } from '../campaign/CampaignTypes';
 import { SaveValidator } from './SaveValidator';
@@ -419,6 +419,37 @@ export class SaveManager {
     if (this.beforeUnloadHandler) {
       window.removeEventListener('beforeunload', this.beforeUnloadHandler);
       this.beforeUnloadHandler = null;
+    }
+  }
+
+  // --- Replay Methods ---
+
+  exportReplay(data: ReplaySnapshot): string {
+    return JSON.stringify(data);
+  }
+
+  exportReplayToFile(data: ReplaySnapshot, filename: string): void {
+    const json = this.exportReplay(data);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  importReplay(json: string): ReplaySnapshot | null {
+    try {
+      const data = JSON.parse(json) as ReplaySnapshot;
+      if (!data.version || !data.frames || !data.initialUnits) {
+        console.warn('SaveManager: Invalid replay data');
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.warn('SaveManager: Replay parse failed', e);
+      return null;
     }
   }
 }
