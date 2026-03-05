@@ -1,0 +1,322 @@
+{
+  "_comment": "Alkaid shared constants — single source of truth for TS game + Python training env",
+
+  "simulation": {
+    "SIM_TICK_RATE": 20,
+    "SIM_TICK_INTERVAL_MS": 50,
+    "MAX_FRAME_DELTA_MS": 250
+  },
+
+  "map": {
+    "DEFAULT_MAP_WIDTH": 200,
+    "DEFAULT_MAP_HEIGHT": 150,
+    "TILE_SIZE": 16
+  },
+
+  "terrainGen": {
+    "OCTAVES": 6,
+    "LACUNARITY": 2.0,
+    "PERSISTENCE": 0.5,
+    "BASE_FREQUENCY": 0.005,
+    "ELEVATION_POWER": 1.5,
+    "MOISTURE_SEED_OFFSET": 10000,
+    "RIVER_COUNT_MIN": 2,
+    "RIVER_COUNT_MAX": 5,
+    "RIVER_EROSION": 0.98,
+    "WATER_LEVEL": 0.15,
+    "FORD_LEVEL": 0.20,
+    "MOUNTAIN_LEVEL": 0.80,
+    "HILLS_LEVEL": 0.60,
+    "FOREST_MOISTURE": 0.66,
+    "PLAINS_MOISTURE": 0.33
+  },
+
+  "enums": {
+    "TerrainType": {
+      "WATER": 0, "FORD": 1, "PLAINS": 2, "FOREST": 3, "HILLS": 4,
+      "MOUNTAINS": 5, "RIVER": 6, "MARSH": 7, "ROAD": 8, "CITY": 9
+    },
+    "UnitType": {
+      "JI_HALBERDIERS": 0, "DAO_SWORDSMEN": 1, "NU_CROSSBOWMEN": 2,
+      "GONG_ARCHERS": 3, "LIGHT_CAVALRY": 4, "HEAVY_CAVALRY": 5,
+      "HORSE_ARCHERS": 6, "SIEGE_ENGINEERS": 7, "ELITE_GUARD": 8,
+      "SCOUTS": 9, "MENG_CHONG": 10, "LOU_CHUAN": 11,
+      "FIRE_SHIPS": 12, "GENERAL": 13
+    },
+    "UnitCategory": {
+      "INFANTRY": 0, "RANGED": 1, "CAVALRY": 2, "SIEGE": 3, "NAVAL": 4
+    },
+    "UnitState": {
+      "IDLE": 0, "MOVING": 1, "ATTACKING": 2, "DEFENDING": 3, "ROUTING": 4, "DEAD": 5
+    },
+    "OrderType": {
+      "MOVE": 0, "ATTACK": 1, "HOLD": 2, "RETREAT": 3, "FLANK": 4,
+      "CHARGE": 5, "FORM_UP": 6, "DISENGAGE": 7, "RALLY": 8
+    },
+    "WeatherType": {
+      "CLEAR": 0, "RAIN": 1, "FOG": 2, "WIND": 3, "SNOW": 4
+    },
+    "TimeOfDay": {
+      "DAWN": 0, "MORNING": 1, "MIDDAY": 2, "AFTERNOON": 3, "DUSK": 4, "NIGHT": 5
+    },
+    "VictoryType": {
+      "SURRENDER": 0, "ANNIHILATION": 1, "GENERAL_KILLED": 2,
+      "STARVATION": 3, "RETREAT": 4, "STALEMATE": 5
+    }
+  },
+
+  "terrainStats": {
+    "0":  { "moveCost": -1,  "defBonus": 0.00, "cavEffect": 0.00, "forageRate": 0.0 },
+    "1":  { "moveCost": 2.5, "defBonus": -0.20, "cavEffect": 0.30, "forageRate": 0.0 },
+    "2":  { "moveCost": 1.0, "defBonus": 0.00, "cavEffect": 1.00, "forageRate": 1.0 },
+    "3":  { "moveCost": 1.8, "defBonus": 0.25, "cavEffect": 0.25, "forageRate": 1.5 },
+    "4":  { "moveCost": 2.0, "defBonus": 0.40, "cavEffect": 0.50, "forageRate": 0.5 },
+    "5":  { "moveCost": 3.0, "defBonus": 0.50, "cavEffect": 0.10, "forageRate": 0.2 },
+    "6":  { "moveCost": -1,  "defBonus": 0.30, "cavEffect": 0.00, "forageRate": 1.2 },
+    "7":  { "moveCost": 3.0, "defBonus": -0.10, "cavEffect": 0.10, "forageRate": 0.3 },
+    "8":  { "moveCost": 0.5, "defBonus": 0.00, "cavEffect": 1.00, "forageRate": 0.0 },
+    "9":  { "moveCost": 0.5, "defBonus": 1.50, "cavEffect": 0.00, "forageRate": 0.0 }
+  },
+
+  "unitTypeConfigs": {
+    "0":  { "category": 0, "maxSize": 120, "hpPerSoldier": 100, "damage": 8,   "attackSpeed": 1.0,  "range": 1,  "armor": 6,  "armorPen": 0, "speed": 1.0, "cost": 80 },
+    "1":  { "category": 0, "maxSize": 80,  "hpPerSoldier": 90,  "damage": 12,  "attackSpeed": 1.2,  "range": 1,  "armor": 4,  "armorPen": 0, "speed": 1.2, "cost": 100 },
+    "2":  { "category": 1, "maxSize": 100, "hpPerSoldier": 70,  "damage": 15,  "attackSpeed": 0.33, "range": 8,  "armor": 2,  "armorPen": 3, "speed": 0.8, "cost": 90 },
+    "3":  { "category": 1, "maxSize": 80,  "hpPerSoldier": 65,  "damage": 9,   "attackSpeed": 0.8,  "range": 6,  "armor": 1,  "armorPen": 1, "speed": 1.1, "cost": 120 },
+    "4":  { "category": 2, "maxSize": 40,  "hpPerSoldier": 85,  "damage": 10,  "attackSpeed": 0.9,  "range": 1,  "armor": 3,  "armorPen": 0, "speed": 2.5, "cost": 200 },
+    "5":  { "category": 2, "maxSize": 25,  "hpPerSoldier": 110, "damage": 18,  "attackSpeed": 0.7,  "range": 1,  "armor": 8,  "armorPen": 0, "speed": 2.0, "cost": 350 },
+    "6":  { "category": 2, "maxSize": 30,  "hpPerSoldier": 75,  "damage": 7,   "attackSpeed": 0.6,  "range": 5,  "armor": 2,  "armorPen": 0, "speed": 2.3, "cost": 280 },
+    "7":  { "category": 3, "maxSize": 30,  "hpPerSoldier": 60,  "damage": 25,  "attackSpeed": 0.1,  "range": 10, "armor": 0,  "armorPen": 0, "speed": 0.4, "cost": 500 },
+    "8":  { "category": 0, "maxSize": 30,  "hpPerSoldier": 130, "damage": 16,  "attackSpeed": 1.1,  "range": 1,  "armor": 7,  "armorPen": 0, "speed": 1.3, "cost": 400 },
+    "9":  { "category": 0, "maxSize": 20,  "hpPerSoldier": 50,  "damage": 5,   "attackSpeed": 1.0,  "range": 1,  "armor": 1,  "armorPen": 0, "speed": 2.0, "cost": 60 },
+    "10": { "category": 4, "maxSize": 40,  "hpPerSoldier": 80,  "damage": 14,  "attackSpeed": 0.8,  "range": 1,  "armor": 5,  "armorPen": 0, "speed": 1.8, "cost": 250 },
+    "11": { "category": 4, "maxSize": 100, "hpPerSoldier": 70,  "damage": 12,  "attackSpeed": 0.5,  "range": 6,  "armor": 4,  "armorPen": 0, "speed": 0.8, "cost": 450 },
+    "12": { "category": 4, "maxSize": 10,  "hpPerSoldier": 40,  "damage": 200, "attackSpeed": 0,    "range": 0,  "armor": 0,  "armorPen": 0, "speed": 2.2, "cost": 150 },
+    "13": { "category": 0, "maxSize": 1,   "hpPerSoldier": 200, "damage": 5,   "attackSpeed": 1.0,  "range": 1,  "armor": 10, "armorPen": 0, "speed": 1.5, "cost": 0 }
+  },
+
+  "typeMatchupTable": [
+    [1.0, 0.8, 1.0, 1.0, 1.5, 1.5, 1.5, 1.0, 0.8, 1.2],
+    [1.2, 1.0, 1.3, 1.3, 0.7, 0.6, 0.7, 1.5, 0.9, 1.5],
+    [1.2, 1.0, 1.0, 1.0, 0.8, 0.7, 0.8, 1.0, 1.0, 1.0],
+    [1.0, 0.9, 1.0, 1.0, 1.0, 0.6, 1.0, 1.2, 0.8, 1.2],
+    [0.6, 1.1, 1.5, 1.5, 1.0, 0.7, 1.0, 2.0, 0.8, 1.5],
+    [0.5, 1.3, 1.8, 1.8, 1.3, 1.0, 1.2, 2.5, 1.0, 2.0],
+    [0.7, 0.8, 0.9, 0.9, 1.1, 0.8, 1.0, 1.3, 0.7, 1.0],
+    [0.5, 0.5, 0.5, 0.5, 0.3, 0.3, 0.3, 1.0, 0.5, 0.5],
+    [1.2, 1.1, 1.2, 1.2, 1.3, 1.2, 1.2, 1.5, 1.0, 1.5],
+    [0.5, 0.4, 0.5, 0.5, 0.4, 0.3, 0.4, 0.8, 0.3, 1.0]
+  ],
+
+  "unitTerrainCostOverrides": {
+    "1":  { "3": 1.0, "4": 1.0 },
+    "4":  { "3": 4.0, "4": 2.0, "5": -1, "7": -1 },
+    "5":  { "3": 6.0, "4": 2.5, "5": -1, "7": -1 },
+    "6":  { "3": -1, "4": 2.5, "5": -1, "7": -1 },
+    "9":  { "3": 1.0, "4": 1.0, "7": 1.0, "5": 1.5 },
+    "10": { "0": 1.0, "6": 1.0, "2": -1, "3": -1, "4": -1, "5": -1, "7": -1, "8": -1, "9": -1, "1": -1 },
+    "11": { "0": 1.0, "6": 1.0, "2": -1, "3": -1, "4": -1, "5": -1, "7": -1, "8": -1, "9": -1, "1": -1 },
+    "12": { "0": 1.0, "6": 1.0, "2": -1, "3": -1, "4": -1, "5": -1, "7": -1, "8": -1, "9": -1, "1": -1 }
+  },
+
+  "rangedUnitTypes": [2, 3, 6, 7],
+  "fireWhileMovingTypes": [6, 3],
+
+  "pathfinding": {
+    "SPATIAL_HASH_CELL_SIZE": 64,
+    "PATH_MAX_COMPUTATIONS_PER_TICK": 5,
+    "PATH_CACHE_TTL_TICKS": 40,
+    "PATH_MAX_LENGTH": 20000,
+    "FLOW_FIELD_GROUP_THRESHOLD": 6,
+    "FLOW_FIELD_TARGET_SNAP": 3,
+    "PATH_DIAGONAL_COST": 1.414,
+    "PATH_ARRIVAL_THRESHOLD": 4,
+    "PATH_RECALC_DISTANCE": 48
+  },
+
+  "command": {
+    "COMMAND_RADIUS_FRACTION": 0.30,
+    "MESSENGER_SPEED": 4.0,
+    "MESSENGER_SPEED_IN_RADIUS": 12.0,
+    "MESSENGER_RETREAT_SPEED_BONUS": 1.5,
+    "MESSENGER_RALLY_DELAY_MULTIPLIER": 2.0,
+    "GENERAL_DEAD_MESSENGER_SPEED_MULT": 0.5,
+    "GENERAL_DEAD_MISINTERPRET_CHANCE": 0.15,
+    "RALLY_MORALE_THRESHOLD_OFFSET": 15,
+    "MESSENGER_TRAIL_INTERVAL_TICKS": 2
+  },
+
+  "combat": {
+    "MELEE_RANGE_TILES": 1,
+    "COMBAT_DETECT_INTERVAL_TICKS": 2,
+    "CAVALRY_CHARGE_BONUS_LIGHT": 2.0,
+    "CAVALRY_CHARGE_BONUS_HEAVY": 2.5,
+    "CAVALRY_CHARGE_MORALE_SHOCK": -8,
+    "SIEGE_AREA_RADIUS_TILES": 2,
+    "SIEGE_SETUP_TICKS": 100,
+    "DAO_SHIELD_ARROW_REDUCTION": 0.30,
+    "CROSSBOW_VOLLEY_RANKS": 3,
+    "FIRE_WHILE_MOVING_PENALTY": 0.30,
+    "COMBINE_THRESHOLD": 0.70,
+    "SPLIT_MORALE_PENALTY": 10,
+    "COMBAT_DISENGAGE_RANGE_MULT": 1.2,
+    "MORALE_LOSS_PER_CASUALTY_PERCENT": -2,
+    "ROUT_CASCADE_RADIUS_TILES": 5,
+    "ROUT_CASCADE_MORALE_HIT": -10,
+    "ROUT_SPEED_MULTIPLIER": 1.5,
+    "ROUT_DAMAGE_TAKEN_MULT": 1.5,
+    "ROUT_NO_ORDERS_TICKS": 30,
+    "GENERAL_NEARBY_MORALE_PER_TICK": 1.0
+  },
+
+  "orderEffects": {
+    "HOLD_DEFENSE_BONUS": 0.10,
+    "CHARGE_SPEED_MULT": 1.30,
+    "CHARGE_FATIGUE_PER_TICK": 2,
+    "FORM_UP_ARMOR_BONUS": 0.20,
+    "FORM_UP_SPEED_PENALTY": 0.30,
+    "FORM_UP_COMPLETION_TICKS": 3,
+    "DISENGAGE_SPEED_PENALTY": 0.20,
+    "DISENGAGE_PENALTY_TICKS": 5
+  },
+
+  "weatherModifiers": {
+    "0": { "rangedMult": 1.0,  "crossbowMult": 1.0,  "movementMult": 1.0,  "siegeAccuracyMult": 1.0, "visibilityMult": 1.0,  "fireMult": 1.0,  "fordDangerMult": 1.0,  "ambushMoraleMult": 1.0 },
+    "1": { "rangedMult": 0.80, "crossbowMult": 0.60, "movementMult": 0.80, "siegeAccuracyMult": 0.70, "visibilityMult": 0.80, "fireMult": 0.50, "fordDangerMult": 1.50, "ambushMoraleMult": 1.0 },
+    "2": { "rangedMult": 0.80, "crossbowMult": 0.80, "movementMult": 1.0,  "siegeAccuracyMult": 1.0, "visibilityMult": 0.50, "fireMult": 1.0,  "fordDangerMult": 1.0,  "ambushMoraleMult": 2.0 },
+    "3": { "rangedMult": 1.0,  "crossbowMult": 1.0,  "movementMult": 1.0,  "siegeAccuracyMult": 1.0, "visibilityMult": 1.0,  "fireMult": 1.0,  "fordDangerMult": 1.0,  "ambushMoraleMult": 1.0 },
+    "4": { "rangedMult": 1.0,  "crossbowMult": 1.0,  "movementMult": 0.85, "siegeAccuracyMult": 1.0, "visibilityMult": 0.70, "fireMult": 1.0,  "fordDangerMult": 0.0,  "ambushMoraleMult": 1.0 }
+  },
+
+  "weather": {
+    "WIND_ACCURACY_BONUS": 0.10,
+    "WIND_RANGE_BONUS": 1,
+    "SNOW_FATIGUE_MULT": 1.50,
+    "SNOW_SOUTHERN_MORALE_PENALTY": -10,
+    "SNOW_ICE_BREAK_CHANCE": 0.10,
+    "SNOW_ICE_BREAK_CASUALTIES": 0.30,
+    "WEATHER_SHIFT_INTERVAL_TICKS": 200,
+    "WEATHER_SHIFT_CHANCE": 0.20,
+    "WEATHER_PROBABILITIES": [0.40, 0.20, 0.15, 0.15, 0.10]
+  },
+
+  "timeOfDayModifiers": {
+    "0": { "visibilityMult": 0.80, "moraleMod": 0,   "fatigueMult": 1.0,  "supplyMult": 1.0, "rangedAccuracyMult": 1.0,  "attackerMoraleBonus": 10, "fogChanceBonus": 0.20 },
+    "1": { "visibilityMult": 1.00, "moraleMod": 0,   "fatigueMult": 1.0,  "supplyMult": 1.0, "rangedAccuracyMult": 1.0,  "attackerMoraleBonus": 0,  "fogChanceBonus": 0 },
+    "2": { "visibilityMult": 1.00, "moraleMod": 0,   "fatigueMult": 1.20, "supplyMult": 1.30, "rangedAccuracyMult": 1.0,  "attackerMoraleBonus": 0,  "fogChanceBonus": 0 },
+    "3": { "visibilityMult": 1.00, "moraleMod": -5,  "fatigueMult": 1.10, "supplyMult": 1.0, "rangedAccuracyMult": 1.0,  "attackerMoraleBonus": 0,  "fogChanceBonus": 0 },
+    "4": { "visibilityMult": 0.60, "moraleMod": 0,   "fatigueMult": 1.15, "supplyMult": 1.0, "rangedAccuracyMult": 0.85, "attackerMoraleBonus": 0,  "fogChanceBonus": 0, "defenderMoraleBonus": 5 },
+    "5": { "visibilityMult": 0.30, "moraleMod": -10, "fatigueMult": 1.05, "supplyMult": 1.0, "rangedAccuracyMult": 0.80, "attackerMoraleBonus": 0,  "fogChanceBonus": 0 }
+  },
+
+  "timeOfDay": {
+    "TIME_PHASE_DURATION_TICKS": 200,
+    "NIGHT_VETERAN_EXP_THRESHOLD": 60,
+    "NIGHT_FRIENDLY_FIRE_CHANCE": 0.05,
+    "NIGHT_FIRE_MORALE_MULT": 1.30
+  },
+
+  "fogOfWar": {
+    "FOW_BASE_VISION_TILES": 5,
+    "FOW_SCOUT_STEALTH_RANGE": 2,
+    "FOW_HILL_ELEVATION_BONUS": 0.5,
+    "FOW_TICK_RECOMPUTE_INTERVAL": 4,
+    "FOW_DIRTY_MOVE_THRESHOLD_TILES": 1.0,
+    "FOW_VISION_MULTIPLIERS": { "9": 3, "4": 2 },
+    "FOW_TERRAIN_BLOCKS_LOS": { "3": true, "5": true }
+  },
+
+  "fatigue": {
+    "FATIGUE_MARCH_PER_TICK": 1,
+    "FATIGUE_FIGHTING_PER_TICK": 3,
+    "FATIGUE_FORD_PER_TICK": 5,
+    "FATIGUE_MOUNTAIN_PER_TICK": 2,
+    "FATIGUE_SIEGE_CARRY_PER_TICK": 2,
+    "FATIGUE_RECOVERY_STATIONARY": -2,
+    "FATIGUE_RECOVERY_WELL_FED_BONUS": -0.5,
+    "FATIGUE_SPEED_THRESHOLDS": [[100, 0.30], [80, 0.50], [60, 0.70], [30, 0.85], [0, 1.00]],
+    "FATIGUE_MORALE_THRESHOLD": 80,
+    "FATIGUE_MORALE_PENALTY_PER_TICK": -1
+  },
+
+  "supply": {
+    "SUPPLY_BASE_CAPACITY": 6000,
+    "SUPPLY_CONSUMPTION_PER_SOLDIER_PER_TICK": 0.01,
+    "SUPPLY_LOW_RATIONS_THRESHOLD": 0.50,
+    "SUPPLY_HUNGER_THRESHOLD": 0.25,
+    "SUPPLY_COLLAPSE_TICKS": 50,
+    "SUPPLY_WELL_FED_MORALE_PER_TICK": 0.5,
+    "SUPPLY_LOW_RATIONS_MORALE_PER_TICK": -1,
+    "SUPPLY_HUNGER_MORALE_PER_TICK": -3,
+    "SUPPLY_STARVATION_MORALE_PER_TICK": -5,
+    "SUPPLY_LOW_RATIONS_SPEED_MULT": 0.90,
+    "SUPPLY_HUNGER_SPEED_MULT": 0.80,
+    "SUPPLY_HUNGER_COMBAT_MULT": 0.80,
+    "SUPPLY_STARVATION_SPEED_MULT": 0.70,
+    "SUPPLY_STARVATION_COMBAT_MULT": 0.60,
+    "SUPPLY_STARVATION_FATIGUE_PER_TICK": 2,
+    "SUPPLY_HUNGER_DESERTION_PER_TICK": 0.5,
+    "SUPPLY_STARVATION_DESERTION_PER_TICK": 1.5
+  },
+
+  "experience": {
+    "EXP_KILL_THRESHOLD": 10,
+    "EXP_PER_KILL_BATCH": 1,
+    "EXP_ROUTE_ENEMY": 3,
+    "EXP_ROUTE_RADIUS_TILES": 5,
+    "EXP_HOLD_UNDER_BOMBARDMENT": 2,
+    "EXP_HOLD_BOMBARDMENT_TICKS": 20
+  },
+
+  "morale": {
+    "MORALE_WINNING_ENGAGEMENT_BONUS": 5,
+    "MORALE_WINNING_ENGAGEMENT_RADIUS_TILES": 5,
+    "MORALE_ELITE_GUARD_AURA": 3.0,
+    "MORALE_ELITE_GUARD_AURA_RADIUS_TILES": 3,
+    "MORALE_GENERAL_KILLED_HIT": -30,
+    "MORALE_ENCIRCLED_PER_TICK": -5,
+    "MORALE_OUTNUMBERED_PER_TICK": -1,
+    "MORALE_EXTENDED_COMBAT_PER_TICK": -0.5,
+    "MORALE_EXTENDED_COMBAT_THRESHOLD_TICKS": 30,
+    "MORALE_ARMY_ROUT_30_PERCENT": -20,
+    "MORALE_ARMY_ROUT_50_PERCENT": -40,
+    "MORALE_FAVORABLE_TERRAIN_BONUS": 2.0
+  },
+
+  "surrender": {
+    "SURRENDER_CHECK_INTERVAL_TICKS": 10,
+    "SURRENDER_PRESSURE_THRESHOLD": 80,
+    "SURRENDER_CONSECUTIVE_CHECKS": 5,
+    "SURRENDER_WEIGHT_MORALE": 0.30,
+    "SURRENDER_WEIGHT_CASUALTY": 0.25,
+    "SURRENDER_WEIGHT_SUPPLY": 0.20,
+    "SURRENDER_WEIGHT_ENCIRCLEMENT": 0.15,
+    "SURRENDER_WEIGHT_LEADERSHIP": 0.10,
+    "ENCIRCLEMENT_QUADRANTS": 4,
+    "ENCIRCLEMENT_CHECK_RADIUS": 15,
+    "ENCIRCLEMENT_ENEMY_THRESHOLD": 3
+  },
+
+  "retreat": {
+    "RETREAT_EVACUATION_TICKS": 60,
+    "STALEMATE_DETECTION_TICKS": 100,
+    "STALEMATE_CASUALTY_THRESHOLD": 5
+  },
+
+  "ai": {
+    "AI_TEAM": 1,
+    "AI_DEFAULT_DECISION_INTERVAL": 20
+  },
+
+  "training": {
+    "MAX_UNITS_PER_TEAM": 32,
+    "DECISION_INTERVAL_TICKS": 20,
+    "MAX_EPISODE_STEPS": 300,
+    "MAX_TICKS": 6000,
+    "TARGET_X_BINS": 20,
+    "TARGET_Y_BINS": 15,
+    "NUM_ORDER_TYPES": 10,
+    "UNIT_FEATURES": 40,
+    "GLOBAL_FEATURES": 22
+  }
+}

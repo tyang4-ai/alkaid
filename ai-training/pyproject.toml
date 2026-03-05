@@ -1,0 +1,36 @@
+[project]
+name = "alkaid-training"
+version = "0.1.0"
+description = "Alkaid RL training environment for ancient Chinese war simulation"
+requires-python = ">=3.10"
+dependencies = [
+    "gymnasium>=0.29.0",
+    "numpy>=1.24.0",
+    "sb3-contrib>=2.3.0",
+    "stable-baselines3>=2.3.0",
+    "torch>=2.0.0",
+    "onnx>=1.14.0",
+    "onnxruntime>=1.16.0",
+    "opensimplex>=0.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+wandb = [
+    "wandb>=0.16.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["env*", "bots*", "training*", "evaluation*", "parity*", "shared*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["..", "."]

@@ -1,6 +1,8 @@
 // Alkaid (破军) — Game Constants
 // ALL game balance numbers, timing, and configuration.
 // Must match Python training environment (Phase 4).
+// Shared constants also live in: shared/constants.json (used by Python RL env).
+// Keep both in sync — parity tests (Step 15h) verify consistency.
 
 // --- Simulation Timing ---
 export const SIM_TICK_RATE = 20;
