@@ -1,6 +1,6 @@
 # Alkaid (破军) — Implementation Progress
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 ## Phase 1: Core Engine
 
@@ -41,6 +41,7 @@ Last updated: 2026-03-03
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
 | 14 | Rule-based AI | DONE | AIController pipeline (Perception→Assessment→RoleAssignment→Decision→Orders). 4 personalities (Aggressive/Defensive/Cunning/Balanced) with distinct weight tables. 7 tactical roles (ATTACKER/DEFENDER/FLANKER/RESERVE/SCOUT/SUPPLY_RAIDER/GUARD). Phase state machine with hysteresis (OPENING→ENGAGEMENT→PRESSING/RETREATING→DESPERATE). AI uses own FogOfWarSystem (no cheating), orders via CommandSystem (messenger delay). Full serialization for save/load. 46 new tests (693 total). |
+| 14b-14e | QoL + Tech (see Phase 4b) | DONE | 57 new tests (750 total). See Phase 4b table for details. |
 | 15 | Python training env + reward design | TODO | PPO, reward shaping, parity framework, evaluation |
 | 16 | Browser AI integration + adaptation | TODO | ONNX in Web Worker, adaptation layer, difficulty tiers |
 
@@ -48,10 +49,10 @@ Last updated: 2026-03-03
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 14b | Web Workers | TODO | Pathfinding + AI off main thread |
-| 14c | Minimap, tooltips, undo, order queue | TODO | Interactive minimap, hover tooltips, Ctrl+Z |
-| 14d | Replay + accessibility | TODO | Deterministic replay, colorblind, UI scale, rebinding |
-| 14e | Performance monitoring | TODO | Debug overlay, FPS, tick time, memory |
+| 14b | Web Workers | DONE | PathWorkerClient wraps pathfinding in Web Worker (Vite `new URL()` pattern), PathWorkerAdapter bridges worker messages to PathManager API. Tested with mock worker. |
+| 14c | Minimap, tooltips, order queue | DONE | Minimap (Canvas2D overlay, terrain+unit dots, camera viewport rect, click-to-pan), TooltipSystem (DOM tooltip on unit hover with stats), OrderQueueRenderer (shift+right-drag appends orders, numbered gold waypoint circles with dashed connecting lines, max 8 queue depth). 8-order queue in OrderManager. |
+| 14d | Replay + accessibility | DONE | ReplayRecorder (captures per-tick unit snapshots + order deliveries), ReplayPlayer (deterministic playback from snapshots), ReplayControls (play/pause, timeline scrubber, speed, FOW toggle, exit). SettingsManager (localStorage-persisted colorblind palettes, UI scale), SettingsScreen (DOM settings panel from PauseMenu). |
+| 14e | Performance monitoring | DONE | PerfMonitor (DOM overlay: FPS, sim tick time, render time, unit count, memory usage). F3 hotkey toggle. |
 
 ## Phase 5: Art + Polish
 
@@ -77,4 +78,5 @@ Last updated: 2026-03-03
 - **2026-02-27**: Steps 10-10d complete. Battle HUD, alerts, speed controls, hotkeys, retreat, codex, after-action report, cinematics. 418 tests pass. Browser-tested: BattleHUD live stats, SpeedControls, PauseMenu, Codex (5 tabs), retreat confirmation, AfterActionReport with timeline/squad table, BattleCinematic. Bug fixes: PauseMenu no longer shows during deployment (battleActive guard), BattleEndOverlay hidden when AfterActionReport shows, RETREAT/STALEMATE victory type names added. 小篆 font deferred to Step 18.
 - **2026-03-02**: Step 12 complete. Campaign system. 20-territory adjacency graph with SVG map rendering. CampaignManager orchestrates full run lifecycle (NEW_RUN_SETUP→CAMPAIGN_MAP→CAMP→PRE_BATTLE_INTEL→BATTLE→POST_BATTLE→RUN_OVER). RecruitmentManager enforces costs/limits (15 squad max, cavalry/siege/elite caps). UnlockManager with 14 permanent unlocks (localStorage). EnemyArmyGenerator scales with difficulty (garrison + turn + conquered territory multipliers). RandomEventSystem (10 events: peasant uprising, defectors, disease, merchant, storm, etc.). 7 campaign UI screens (DOM overlays). Campaign ironman saves in IndexedDB. main.ts refactored: AppMode toggle, startBattle()/finishBattleProcessing()/resetBattleSystems(), battle-to-campaign loop. GameLoop internal methods (_pauseInternal/_resumeInternal/_setSpeedInternal) for event-safe state changes. Full visual test: NewRun→Map→Camp→Intel→Battle→Cinematic→AAR→Clemency→Map verified. 618 tests pass.
 - **2026-03-03**: Step 14 complete. Rule-based AI system. 6 new source files in `src/simulation/ai/`: AITypes.ts (enums+interfaces), AIPersonality.ts (4 personality weight tables), AIPerception.ts (battlefield assessment from FOW-filtered data), AIRoleAssigner.ts (personality-weighted role allocation with type affinity), AIDecisionMaker.ts (per-role tactical logic for 7 roles), AIController.ts (pipeline orchestrator with phase state machine). AI constants in constants.ts, events in EventBus.ts, AISnapshot in SaveTypes.ts. Wired into main.ts (aiFogOfWar + aiController in sim tick, battle start, save/load). SaveManager extended for AI serialization. 46 new tests across 5 test files (693 total). All tests pass.
+- **2026-03-04**: Steps 14b-14e complete. QoL + Tech batch. 12 new source files + 8 test files + 5 worker/type files across 2 commits (3148 insertions). PathWorkerClient/Adapter (Web Worker pathfinding), Minimap (Canvas2D overlay with click-to-pan), TooltipSystem (unit hover stats), OrderQueueRenderer (shift+right-drag queued waypoints), ReplayRecorder/ReplayPlayer/ReplayControls (deterministic battle replay with scrubbing), SettingsManager/SettingsScreen (colorblind palettes, UI scale), PerfMonitor (F3 debug overlay). OrderManager extended to 8-order queue. main.ts integration: all systems wired into game loop, battle start/end, replay mode entry from AfterActionReport. 57 new tests (750 total).
 - **2026-03-02**: Step 11 complete. Save system. Serializable<T> interface on all 11 stateful systems (GameState, UnitManager, OrderManager, SupplySystem, SurrenderSystem, CommandSystem, WeatherSystem, TimeOfDaySystem, DeploymentManager, RetreatSystem, BattleEventLogger). SaveManager (IndexedDB persistent saves + localStorage emergency recovery), SaveValidator (runtime type checking), MigrationChain (version-based migration). SaveLoadScreen (Civ 6-style full-screen overlay with named saves, delete, export/import). PauseMenu 4 save buttons (Quick Save/Load, Save/Load Game). SaveToast notification. Auto-save every 60s during battle, emergency save on beforeunload. 32 new tests (450 total). Visual testing deferred (Chrome MCP unavailable).
