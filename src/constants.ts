@@ -827,3 +827,15 @@ export const UI_SCALE_STEP = 0.05;
 
 // --- Step 14e: Performance Monitor ---
 export const PERF_UPDATE_INTERVAL_MS = 500;
+
+// --- RL AI (Hackathon) ---
+export const RL_MODEL_PATH = '/models/alkaid_ai.onnx';
+export const RL_OBS_SIZE = 2582; // 32*40*2 + 22
+export const RL_MAX_UNITS = 32;
+export const RL_UNIT_FEATURES = 40;
+export const RL_GLOBAL_FEATURES = 22;
+export const RL_DECISION_INTERVAL = 20; // ticks between decisions (1 second)
+export const RL_TARGET_X_BINS = 20;
+export const RL_TARGET_Y_BINS = 15;
+export const RL_ORDER_TYPES = 10;
+export const RL_INFERENCE_TIMEOUT_MS = 5000;

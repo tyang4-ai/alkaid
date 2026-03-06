@@ -6,3 +6,8 @@ dist/
 .worktrees/
 __pycache__/
 *.pyc
+.env
+checkpoints/
+logs/
+*.onnx
+public/models/
