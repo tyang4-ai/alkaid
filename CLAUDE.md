@@ -83,7 +83,7 @@ Follow the numbered steps in the main plan sequentially. Each step has a **Verif
 ## Git Workflow
 - **Default branch:** `main` — always branch from `main`, merge back to `main`
 - **Branch naming:** `feat/<step>-<description>`, `fix/<description>`, `docs/<description>`, `chore/<description>`
-- **Commits:** Conventional commit prefixes (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`). Keep messages concise, focused on "why" not "what". **Do NOT add Co-Authored-By lines or "written by" attribution in commit messages.**
+- **Commits:** Conventional commit prefixes (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`). Keep messages concise, focused on "why" not "what". **Do NOT add Co-Authored-By lines, "written by" attribution, or any AI attribution in commit messages — never.**
 - **Feature branches:** One branch per step or feature. Use worktrees for parallel sub-step work
 - **No direct pushes to `main`** for multi-file changes — use feature branches and merge locally or via PR
 - **Keep `main` green:** All tests must pass before merging to `main`

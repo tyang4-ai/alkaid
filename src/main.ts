@@ -89,8 +89,9 @@ import { ReplayControls } from './rendering/ReplayControls';
 import { OrderQueueRenderer } from './rendering/OrderQueueRenderer';
 import type { ReplaySnapshot } from './simulation/persistence/SaveTypes';
 
-// Hackathon: Agent Chat Panel
+// Hackathon: Agent Chat Panel + Landing Screen
 import { AgentChatPanel } from './rendering/AgentChatPanel';
+import { LandingScreen } from './rendering/LandingScreen';
 
 type AppMode = 'campaign_ui' | 'battle' | 'replay';
 
@@ -1566,24 +1567,29 @@ async function main(): Promise<void> {
   };
 
   // --- Startup Flow ---
-  // Check for existing campaign save
-  const hasCampaign = await saveManager.hasCampaignSave();
-  if (hasCampaign) {
-    const campaignSnapshot = await saveManager.loadCampaign();
-    if (campaignSnapshot) {
-      campaignManager.deserialize(campaignSnapshot.campaignState);
-      console.log('Campaign save loaded — resuming campaign');
-      showCampaignMap();
+  const landingScreen = new LandingScreen();
+
+  const startCampaignFlow = async () => {
+    // Check for existing campaign save
+    const hasCampaign = await saveManager.hasCampaignSave();
+    if (hasCampaign) {
+      const campaignSnapshot = await saveManager.loadCampaign();
+      if (campaignSnapshot) {
+        campaignManager.deserialize(campaignSnapshot.campaignState);
+        console.log('Campaign save loaded — resuming campaign');
+        showCampaignMap();
+      } else {
+        const tm = campaignManager.getTerritoryManager();
+        newRunScreen.show(tm.getStartingCandidates());
+      }
     } else {
-      // Corrupted save, start fresh
       const tm = campaignManager.getTerritoryManager();
       newRunScreen.show(tm.getStartingCandidates());
     }
-  } else {
-    // No campaign save — show new run screen
-    const tm = campaignManager.getTerritoryManager();
-    newRunScreen.show(tm.getStartingCandidates());
-  }
+  };
+
+  landingScreen.setOnStart(() => startCampaignFlow());
+  landingScreen.show();
 
   // Apply initial colorblind settings if not 'off'
   if (settingsManager.get('colorblindMode') !== 'off') {

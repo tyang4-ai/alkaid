@@ -7,6 +7,7 @@ import { MetricsCards } from './components/MetricsCards';
 import { TrainingCharts } from './components/TrainingCharts';
 import { ModelComparison } from './components/ModelComparison';
 import { AgentChat } from './components/AgentChat';
+import { ArchitecturePanel } from './components/ArchitecturePanel';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -74,9 +75,17 @@ export class DashboardApp {
 
     this.root.appendChild(mainRow);
 
-    // Agent chat (full-width)
+    // Bottom row: agent chat + architecture
+    const bottomRow = document.createElement('div');
+    bottomRow.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr; gap: 24px;';
+
     const agentChat = new AgentChat(API_BASE);
-    this.root.appendChild(agentChat.element);
+    bottomRow.appendChild(agentChat.element);
+
+    const archPanel = new ArchitecturePanel();
+    bottomRow.appendChild(archPanel.element);
+
+    this.root.appendChild(bottomRow);
 
     // Start polling
     this.fetchAndUpdate();
