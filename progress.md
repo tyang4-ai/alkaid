@@ -43,7 +43,7 @@ Last updated: 2026-03-05
 | 14 | Rule-based AI | DONE | AIController pipeline (Perception→Assessment→RoleAssignment→Decision→Orders). 4 personalities (Aggressive/Defensive/Cunning/Balanced) with distinct weight tables. 7 tactical roles (ATTACKER/DEFENDER/FLANKER/RESERVE/SCOUT/SUPPLY_RAIDER/GUARD). Phase state machine with hysteresis (OPENING→ENGAGEMENT→PRESSING/RETREATING→DESPERATE). AI uses own FogOfWarSystem (no cheating), orders via CommandSystem (messenger delay). Full serialization for save/load. 46 new tests (693 total). |
 | 14b-14e | QoL + Tech (see Phase 4b) | DONE | 57 new tests (750 total). See Phase 4b table for details. |
 | 15 | Python training env + reward design | DONE | Full headless Python training env (15a-15h). See details below. |
-| 16 | Browser AI integration + adaptation | TODO | ONNX in Web Worker, adaptation layer, difficulty tiers |
+| 16 | Browser AI integration + adaptation | IN PROGRESS | ONNX Worker + RLController + AIAdapter + OnnxWorkerClient done. onnxruntime-web installed. Wired into main.ts. Needs trained ONNX model to activate. |
 
 ## Phase 4b: QoL + Tech
 
@@ -61,6 +61,26 @@ Last updated: 2026-03-05
 | 17 | Asset creation (Gemini) | TODO | 16x16 sprites, terrain tiles, UI elements |
 | 18 | Visual polish | TODO | Animations, transitions, weather effects |
 | 19 | Audio | TODO | Battle sounds, ambient, music |
+
+## Hackathon: AI War Room (DigitalOcean Gradient)
+
+| Step | Description | Status | Notes |
+|------|-------------|--------|-------|
+| H1 | DO account + GPU training | TODO | Requires manual signup |
+| H2 | ONNX export + browser integration | DONE | OnnxWorker, OnnxWorkerClient, RLController (2582 obs), AIAdapter |
+| H3 | RAG knowledge base | DONE | Art of War, 36 Stratagems, unit guide CSV, mechanics, 10 historical battles |
+| H4 | Gradient Agent Platform setup | TODO | Requires DO account |
+| H5 | Backend API server | DONE | FastAPI: /chat, /analyze, /suggest-army, /simulate, /explain, /training/* |
+| H6 | Agent chat panel | DONE | AgentChatPanel (right sidebar, typewriter, quick-ask buttons, T hotkey) |
+| H7 | Training dashboard | DONE | Separate Vite entry, Canvas2D charts, MetricsCards, ModelComparison, AgentChat |
+| H8 | Function calling E2E | DONE | Backend routes wired, simulation runner, sample data |
+| H9 | Agent persona polish | DONE | Context-aware responses (deployment/battle/post-battle/training) |
+| H10 | Integration testing | TODO | Chrome MCP unavailable |
+| H11 | Hackathon UI polish | DONE | LandingScreen, ArchitecturePanel, DO branding |
+| H12 | Deploy to DigitalOcean | TODO | Requires DO account |
+| H13 | README + repo prep | DONE | Hackathon README, MIT license |
+| H14 | Demo video | TODO | |
+| H15 | Final test + submit | TODO | |
 
 ---
 
@@ -80,4 +100,5 @@ Last updated: 2026-03-05
 - **2026-03-03**: Step 14 complete. Rule-based AI system. 6 new source files in `src/simulation/ai/`: AITypes.ts (enums+interfaces), AIPersonality.ts (4 personality weight tables), AIPerception.ts (battlefield assessment from FOW-filtered data), AIRoleAssigner.ts (personality-weighted role allocation with type affinity), AIDecisionMaker.ts (per-role tactical logic for 7 roles), AIController.ts (pipeline orchestrator with phase state machine). AI constants in constants.ts, events in EventBus.ts, AISnapshot in SaveTypes.ts. Wired into main.ts (aiFogOfWar + aiController in sim tick, battle start, save/load). SaveManager extended for AI serialization. 46 new tests across 5 test files (693 total). All tests pass.
 - **2026-03-04**: Steps 14b-14e complete. QoL + Tech batch. 12 new source files + 8 test files + 5 worker/type files across 2 commits (3148 insertions). PathWorkerClient/Adapter (Web Worker pathfinding), Minimap (Canvas2D overlay with click-to-pan), TooltipSystem (unit hover stats), OrderQueueRenderer (shift+right-drag queued waypoints), ReplayRecorder/ReplayPlayer/ReplayControls (deterministic battle replay with scrubbing), SettingsManager/SettingsScreen (colorblind palettes, UI scale), PerfMonitor (F3 debug overlay). OrderManager extended to 8-order queue. main.ts integration: all systems wired into game loop, battle start/end, replay mode entry from AfterActionReport. 57 new tests (750 total).
 - **2026-03-02**: Step 11 complete. Save system. Serializable<T> interface on all 11 stateful systems (GameState, UnitManager, OrderManager, SupplySystem, SurrenderSystem, CommandSystem, WeatherSystem, TimeOfDaySystem, DeploymentManager, RetreatSystem, BattleEventLogger). SaveManager (IndexedDB persistent saves + localStorage emergency recovery), SaveValidator (runtime type checking), MigrationChain (version-based migration). SaveLoadScreen (Civ 6-style full-screen overlay with named saves, delete, export/import). PauseMenu 4 save buttons (Quick Save/Load, Save/Load Game). SaveToast notification. Auto-save every 60s during battle, emergency save on beforeunload. 32 new tests (450 total). Visual testing deferred (Chrome MCP unavailable).
+- **2026-03-06**: Hackathon AI War Room (H2-H3, H5-H9, H11, H13). Agent knowledge base (Art of War + 36 Stratagems + unit guide + mechanics + historical battles), ONNX inference pipeline (OnnxWorker + RLController + AIAdapter), FastAPI backend (chat/simulate/training routes), AgentChatPanel (right sidebar with typewriter + context), Training Dashboard (Canvas2D charts + metrics + architecture), LandingScreen, README + MIT license. onnxruntime-web installed. BattleAnalyzer extracts live battle context for agent chat. 750 TS tests + 100 Python tests pass.
 - **2026-03-05**: Step 15 complete (15a-15h). Full Python RL training environment. 8 sub-steps: (15a) shared/constants.json + load_constants.py, pyproject.toml. (15b) env/types.py (all enums+dataclasses), terrain.py (OpenSimplex fBm), random.py (mulberry32 bit-for-bit port), spatial_hash.py. (15c) pathfinding.py (A*), combat.py (12-factor DamageCalculator + CombatSystem), morale.py (12 modifiers + rout cascade), supply.py, fatigue.py, experience.py, surrender.py (5-factor pressure). (15d) game.py (Game class wiring all systems in exact tick order), command.py (messenger dispatch/delivery), environment.py (weather + time-of-day). (15e) alkaid_env.py (Gymnasium wrapper, MultiDiscrete action space 32x[10,20,15], Box obs 2582 float32, action masking), obs_builder.py (40 unit features + 22 global), reward.py (per-step shaping + terminal). (15f) 4 scripted bots (rush, defensive, flanker, balanced). (15g) training pipeline (MaskablePPO, SubprocVecEnv, 5-stage curriculum, callbacks, ONNX export, benchmark). (15h) 5 parity tests. 105 Python tests pass, 750 TS tests pass.
