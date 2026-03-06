@@ -18,6 +18,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "onnxruntime-web": "^1.24.3",
     "pixi.js": "^8.16.0",
     "simplex-noise": "^4.0.3"
   }

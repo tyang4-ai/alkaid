@@ -16,6 +16,7 @@ import type { FogOfWarSystem } from '../FogOfWarSystem';
 import type { TerrainGrid } from '../terrain/TerrainGrid';
 import { AI_TEAM, RL_MODEL_PATH } from '../../constants';
 import type { AIPersonalityType } from './AITypes';
+import type { AISnapshot } from '../persistence/SaveTypes';
 
 export type AIMode = 'rule-based' | 'rl';
 
@@ -102,6 +103,22 @@ export class AIAdapter {
     }
     this.rlController = null;
     this.rlReady = false;
+  }
+
+  reset(): void {
+    this.ruleBasedController.reset();
+  }
+
+  initBattle(unitManager: UnitManager): void {
+    this.ruleBasedController.initBattle(unitManager);
+  }
+
+  serialize(): AISnapshot {
+    return this.ruleBasedController.serialize();
+  }
+
+  deserialize(data: AISnapshot): void {
+    this.ruleBasedController.deserialize(data);
   }
 
   /** Expose rule-based controller for serialization/deserialization */

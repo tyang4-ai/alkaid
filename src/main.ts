@@ -71,6 +71,7 @@ import { IntelScreen } from './rendering/IntelScreen';
 import { FogOfWarSystem } from './simulation/FogOfWarSystem';
 import { FogOfWarRenderer } from './rendering/FogOfWarRenderer';
 import { AIController } from './simulation/ai/AIController';
+import { AIAdapter } from './simulation/ai/AIAdapter';
 import { AIPersonalityType } from './simulation/ai/AITypes';
 import { RandomEventModal } from './rendering/RandomEventModal';
 import { ClemencyModal } from './rendering/ClemencyModal';
@@ -142,7 +143,7 @@ async function main(): Promise<void> {
 
   // AI System (Step 14, mutable — terrain-dependent)
   let aiFogOfWar = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
-  let aiController = new AIController(1, AIPersonalityType.BALANCED, currentSeed, aiFogOfWar, terrainGrid);
+  let aiController: AIAdapter | AIController = new AIAdapter(1, AIPersonalityType.BALANCED, currentSeed, aiFogOfWar, terrainGrid);
 
   // Metrics Systems (Step 9a, mutable — terrain-dependent)
   let fatigueSystem = new FatigueSystem(terrainGrid);
@@ -925,7 +926,11 @@ async function main(): Promise<void> {
 
       // AI Fog of War (team 1 perspective — swapped args) + AI decisions (Step 14)
       aiFogOfWar.tick(tick, unitManager.getByTeam(1), unitManager.getByTeam(0), environmentState);
-      aiController.tick(tick, unitManager, commandSystem, orderManager, supplySystem, environmentState, gameState.getState().paused);
+      if (aiController instanceof AIAdapter) {
+        aiController.tick(tick, unitManager, commandSystem, orderManager, supplySystem, surrenderSystem, environmentState, gameState.getState().paused);
+      } else {
+        aiController.tick(tick, unitManager, commandSystem, orderManager, supplySystem, environmentState, gameState.getState().paused);
+      }
 
       supplySystem.tick(unitManager, environmentState ?? undefined);
       fatigueSystem.tick(unitManager, orderManager, supplySystem.getAllFoodPercents(), environmentState ?? undefined);
@@ -1154,7 +1159,7 @@ async function main(): Promise<void> {
       currentBattleTerritoryId,
       campaignManager.getState().seed,
     );
-    aiController = new AIController(1, aiPersonality, currentSeed + 7777, aiFogOfWar, terrainGrid);
+    aiController = new AIAdapter(1, aiPersonality, currentSeed + 7777, aiFogOfWar, terrainGrid);
     aiController.initBattle(unitManager);
 
     // Step 10: Initialize alert system + show battle HUD + start event logging
