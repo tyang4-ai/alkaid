@@ -32,6 +32,10 @@ def sim() -> dict[str, Any]:
     return load_constants()["simulation"]
 
 
+def sim_cfg() -> dict[str, Any]:
+    return load_constants()["simulation"]
+
+
 def map_cfg() -> dict[str, Any]:
     return load_constants()["map"]
 
