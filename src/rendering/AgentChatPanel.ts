@@ -4,6 +4,7 @@
  */
 
 import { AgentApiClient, type ChatMessage } from '../services/AgentApiClient';
+import type { BattleContext } from '../simulation/ai/BattleAnalyzer';
 
 const PANEL_WIDTH = 340;
 
@@ -12,6 +13,8 @@ const QUICK_ACTIONS = [
   { label: '何策 Advise', prompt: 'What should I do next, strategically?' },
   { label: '薦軍 Suggest', prompt: 'Suggest an army composition for this terrain.' },
 ] as const;
+
+export type ContextProvider = () => BattleContext | null;
 
 export class AgentChatPanel {
   private panel: HTMLDivElement;
@@ -22,6 +25,7 @@ export class AgentChatPanel {
   private messages: ChatMessage[] = [];
   private _visible = false;
   private _sending = false;
+  private contextProvider: ContextProvider | null = null;
 
   constructor(parentElement: HTMLElement, apiBaseUrl?: string) {
     this.client = new AgentApiClient(apiBaseUrl);
@@ -158,6 +162,10 @@ export class AgentChatPanel {
     else this.show();
   }
 
+  setContextProvider(provider: ContextProvider): void {
+    this.contextProvider = provider;
+  }
+
   private handleSend(): void {
     const text = this.inputEl.value.trim();
     if (!text || this._sending) return;
@@ -176,7 +184,8 @@ export class AgentChatPanel {
     const typingEl = this.addTypingIndicator();
 
     try {
-      const response = await this.client.chat(text);
+      const ctx = this.contextProvider?.() ?? undefined;
+      const response = await this.client.chat(text, ctx);
       typingEl.remove();
       this.addAssistantMessage(response.response);
     } catch {

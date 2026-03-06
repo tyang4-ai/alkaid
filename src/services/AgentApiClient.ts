@@ -32,12 +32,13 @@ export class AgentApiClient {
     this.baseUrl = baseUrl ?? DEFAULT_BASE_URL;
   }
 
-  async chat(message: string): Promise<ChatResponse> {
+  async chat(message: string, context?: object): Promise<ChatResponse> {
     const res = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
+        context: context ?? undefined,
         conversation_id: this.conversationId,
       }),
     });

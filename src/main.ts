@@ -72,6 +72,7 @@ import { FogOfWarSystem } from './simulation/FogOfWarSystem';
 import { FogOfWarRenderer } from './rendering/FogOfWarRenderer';
 import { AIController } from './simulation/ai/AIController';
 import { AIAdapter } from './simulation/ai/AIAdapter';
+import { extractBattleContext } from './simulation/ai/BattleAnalyzer';
 import { AIPersonalityType } from './simulation/ai/AITypes';
 import { RandomEventModal } from './rendering/RandomEventModal';
 import { ClemencyModal } from './rendering/ClemencyModal';
@@ -173,6 +174,14 @@ async function main(): Promise<void> {
   const retreatSystem = new RetreatSystem();
   const codex = new Codex(container, eventBus);
   const agentChatPanel = new AgentChatPanel(container);
+  agentChatPanel.setContextProvider(() => {
+    if (appMode !== 'battle') return null;
+    return extractBattleContext(
+      unitManager, supplySystem, surrenderSystem,
+      environmentState, gameState.getState().tickNumber,
+      currentTemplateId,
+    );
+  });
   const battleEventLogger = new BattleEventLogger(eventBus);
   const afterActionReport = new AfterActionReport(container);
   const battleCinematic = new BattleCinematic(container);
