@@ -31,6 +31,7 @@ export class HotkeyManager {
   private onEscapeAction: (() => void) | null = null;
   private onCodexToggle: (() => void) | null = null;
   private onPerfMonitorToggle: (() => void) | null = null;
+  private onChatPanelToggle: (() => void) | null = null;
   private _battleActive = false;
 
   constructor(
@@ -63,6 +64,10 @@ export class HotkeyManager {
 
   setPerfMonitorToggle(fn: () => void): void {
     this.onPerfMonitorToggle = fn;
+  }
+
+  setChatPanelToggle(fn: () => void): void {
+    this.onChatPanelToggle = fn;
   }
 
 
@@ -107,6 +112,13 @@ export class HotkeyManager {
     if (e.code === 'F12') {
       e.preventDefault();
       this.onCodexToggle?.();
+      return;
+    }
+
+    // T: toggle agent chat panel (only when no units selected to avoid conflict with orders)
+    if (e.code === 'KeyT' && this.selectionManager.count === 0) {
+      e.preventDefault();
+      this.onChatPanelToggle?.();
       return;
     }
 

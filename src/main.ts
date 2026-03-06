@@ -89,6 +89,9 @@ import { ReplayControls } from './rendering/ReplayControls';
 import { OrderQueueRenderer } from './rendering/OrderQueueRenderer';
 import type { ReplaySnapshot } from './simulation/persistence/SaveTypes';
 
+// Hackathon: Agent Chat Panel
+import { AgentChatPanel } from './rendering/AgentChatPanel';
+
 type AppMode = 'campaign_ui' | 'battle' | 'replay';
 
 async function main(): Promise<void> {
@@ -167,6 +170,7 @@ async function main(): Promise<void> {
   const battleHUD = new BattleHUD(container);
   const retreatSystem = new RetreatSystem();
   const codex = new Codex(container, eventBus);
+  const agentChatPanel = new AgentChatPanel(container);
   const battleEventLogger = new BattleEventLogger(eventBus);
   const afterActionReport = new AfterActionReport(container);
   const battleCinematic = new BattleCinematic(container);
@@ -217,6 +221,7 @@ async function main(): Promise<void> {
   );
   hotkeyManager.setCodexToggle(() => codex.toggle());
   hotkeyManager.setPerfMonitorToggle(() => perfMonitor.toggle());
+  hotkeyManager.setChatPanelToggle(() => agentChatPanel.toggle());
   hotkeyManager.setEscapeAction(() => {
     if (deploymentManager.phase === DeploymentPhase.BATTLE && !battleEnded) {
       pauseMenu.showRetreatConfirm(() => {
