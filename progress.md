@@ -75,7 +75,7 @@ Last updated: 2026-03-05
 | H7 | Training dashboard | DONE | Separate Vite entry, Canvas2D charts, MetricsCards, ModelComparison, AgentChat |
 | H8 | Function calling E2E | DONE | Backend routes wired, simulation runner, sample data |
 | H9 | Agent persona polish | DONE | Context-aware responses (deployment/battle/post-battle/training) |
-| H10 | Integration testing | TODO | Chrome MCP unavailable |
+| H10 | Integration testing | DONE | Landing→Campaign→Intel→Deploy→Battle→ChatPanel→Codex→Dashboard all verified via Chrome MCP. Build fix: worker.format 'es' for multi-page compat. |
 | H11 | Hackathon UI polish | DONE | LandingScreen, ArchitecturePanel, DO branding |
 | H12 | Deploy to DigitalOcean | TODO | Requires DO account |
 | H13 | README + repo prep | DONE | Hackathon README, MIT license |
