@@ -7,7 +7,6 @@ import type { SupplySystem } from '../metrics/SupplySystem';
 import type { SurrenderSystem } from '../combat/SurrenderSystem';
 import type { EnvironmentState } from '../environment/EnvironmentState';
 import { UnitState, UNIT_TYPE_CONFIGS } from '../../constants';
-import type { UnitType } from '../../constants';
 
 export interface BattleContext {
   terrain: string;

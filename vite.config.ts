@@ -4,6 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   server: { port: 3000, open: false },
+  worker: { format: 'es' },
   build: {
     target: 'es2020',
     sourcemap: true,
