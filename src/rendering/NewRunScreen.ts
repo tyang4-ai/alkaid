@@ -14,6 +14,7 @@ export class NewRunScreen {
       display:none;justify-content:center;align-items:center;
       pointer-events:auto;font-family:'Segoe UI',Arial,sans-serif;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
     document.body.appendChild(this.overlay);
   }
 
@@ -21,11 +22,13 @@ export class NewRunScreen {
     this.selectedTerritoryId = null;
     this.mode = 'ironman';
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
     this.render(candidates);
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.overlay.innerHTML = '';
   }
 

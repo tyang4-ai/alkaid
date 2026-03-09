@@ -14,6 +14,7 @@ export class RunSummaryScreen {
       display:none;justify-content:center;align-items:center;
       pointer-events:auto;font-family:'Segoe UI',Arial,sans-serif;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
     document.body.appendChild(this.overlay);
   }
 
@@ -23,6 +24,7 @@ export class RunSummaryScreen {
     pointsEarned: number,
   ): void {
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
 
     const won = state.territoriesConquered >= CAMPAIGN_WIN_TERRITORIES;
     const heading = won ? '大捷 Victory!' : '败北 Defeat';
@@ -124,7 +126,8 @@ export class RunSummaryScreen {
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.overlay.innerHTML = '';
   }
 

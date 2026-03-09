@@ -27,6 +27,7 @@ export class AfterActionReport {
       justify-content: center; align-items: center; pointer-events: auto;
       overflow-y: auto;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
     parentElement.appendChild(this.overlay);
   }
 
@@ -38,6 +39,7 @@ export class AfterActionReport {
   ): void {
     this._visible = true;
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
 
     const durationTicks = metrics.endTick - metrics.startTick;
     const durationSec = (durationTicks / SIM_TICK_RATE).toFixed(1);
@@ -226,8 +228,8 @@ export class AfterActionReport {
 
   hide(): void {
     this._visible = false;
-    this.overlay.style.display = 'none';
-    this.overlay.innerHTML = '';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; this.overlay.innerHTML = ''; }, 200);
   }
 
   get visible(): boolean {

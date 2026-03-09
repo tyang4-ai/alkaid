@@ -97,6 +97,7 @@ export class BattleCinematic {
       display: none; z-index: 950; pointer-events: auto;
       justify-content: center; align-items: center;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
     parentElement.appendChild(this.overlay);
   }
 
@@ -107,6 +108,7 @@ export class BattleCinematic {
       this.resolvePromise = resolve;
       this._visible = true;
       this.overlay.style.display = 'flex';
+      requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
       this.overlay.style.background = config.bgStyle;
       this.overlay.style.animation = `${config.animation} ${CINEMATIC_DURATION_MS}ms ease-in-out forwards`;
 
@@ -140,19 +142,23 @@ export class BattleCinematic {
 
   private complete(): void {
     this._visible = false;
-    this.overlay.style.display = 'none';
-    this.overlay.style.animation = '';
-    this.overlay.innerHTML = '';
+    this.overlay.classList.add('alkaid-hidden');
 
     if (this.skipHandler) {
       window.removeEventListener('keydown', this.skipHandler);
       this.skipHandler = null;
     }
 
-    if (this.resolvePromise) {
-      this.resolvePromise();
-      this.resolvePromise = null;
-    }
+    setTimeout(() => {
+      this.overlay.style.display = 'none';
+      this.overlay.style.animation = '';
+      this.overlay.innerHTML = '';
+
+      if (this.resolvePromise) {
+        this.resolvePromise();
+        this.resolvePromise = null;
+      }
+    }, 200);
   }
 
   get visible(): boolean {

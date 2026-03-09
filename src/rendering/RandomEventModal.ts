@@ -12,12 +12,14 @@ export class RandomEventModal {
       display:none;justify-content:center;align-items:center;
       pointer-events:auto;font-family:'Segoe UI',Arial,sans-serif;
     `;
+    this.overlay.classList.add('alkaid-modal', 'alkaid-hidden');
     document.body.appendChild(this.overlay);
   }
 
   show(def: RandomEventDefinition, onChoice: (choiceIndex: number) => void): void {
     this.onChoice = onChoice;
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
 
     const choicesHtml = def.choices.map((c, i) => `
       <button class="event-choice-btn" data-idx="${i}" style="
@@ -73,7 +75,8 @@ export class RandomEventModal {
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.overlay.innerHTML = '';
   }
 

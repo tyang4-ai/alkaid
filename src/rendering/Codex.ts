@@ -52,6 +52,7 @@ export class Codex {
       background: rgba(10, 8, 6, 0.85); display: none; z-index: 800;
       justify-content: center; align-items: center; pointer-events: auto;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
 
     const panel = document.createElement('div');
     panel.style.cssText = `
@@ -313,13 +314,15 @@ export class Codex {
   show(): void {
     this._visible = true;
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
     this.eventBus.emit('game:paused', undefined);
     this.eventBus.emit('codex:toggled', { open: true });
   }
 
   hide(): void {
     this._visible = false;
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.eventBus.emit('game:resumed', undefined);
     this.eventBus.emit('codex:toggled', { open: false });
   }

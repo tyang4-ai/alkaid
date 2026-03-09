@@ -46,9 +46,10 @@ export class AlertSystem {
     this.container.className = 'alert-banners';
     this.container.style.cssText = `
       position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-      width: 400px; z-index: 200; pointer-events: none; display: flex;
+      width: 400px; z-index: 200; pointer-events: none; display: none;
       flex-direction: column; gap: 4px;
     `;
+    this.container.classList.add('alkaid-overlay', 'alkaid-hidden');
     parentElement.appendChild(this.container);
 
     // Alert log button
@@ -191,11 +192,13 @@ export class AlertSystem {
 
   show(): void {
     this.container.style.display = 'flex';
+    requestAnimationFrame(() => this.container.classList.remove('alkaid-hidden'));
     this.logBtn.style.display = 'block';
   }
 
   hide(): void {
-    this.container.style.display = 'none';
+    this.container.classList.add('alkaid-hidden');
+    setTimeout(() => { this.container.style.display = 'none'; }, 200);
     this.logBtn.style.display = 'none';
     this.logPanel.style.display = 'none';
   }

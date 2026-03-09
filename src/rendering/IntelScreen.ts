@@ -19,16 +19,19 @@ export class IntelScreen {
       display:none;justify-content:center;align-items:center;
       pointer-events:auto;font-family:'Segoe UI',Arial,sans-serif;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
     document.body.appendChild(this.overlay);
   }
 
   show(territory: Territory, readySquads: CampaignSquad[], enemyPreview?: EnemySquadDef[], playerHasScouts?: boolean): void {
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
     this.render(territory, readySquads, enemyPreview, playerHasScouts);
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.overlay.innerHTML = '';
   }
 

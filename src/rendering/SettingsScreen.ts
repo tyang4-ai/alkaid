@@ -20,6 +20,7 @@ export class SettingsScreen {
     `;
     this.overlay.setAttribute('role', 'dialog');
     this.overlay.setAttribute('aria-label', 'Settings');
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
 
     parentElement.appendChild(this.overlay);
   }
@@ -28,10 +29,12 @@ export class SettingsScreen {
     this.onClose = onClose ?? null;
     this.renderContent();
     this.overlay.style.display = 'block';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.cleanupRebind();
     this.onClose?.();
   }

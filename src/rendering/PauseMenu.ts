@@ -26,6 +26,7 @@ export class PauseMenu {
       justify-content: center; align-items: center; flex-direction: column;
       pointer-events: auto;
     `;
+    this.overlay.classList.add('alkaid-modal', 'alkaid-hidden');
 
     const panel = document.createElement('div');
     panel.style.cssText = `
@@ -132,10 +133,12 @@ export class PauseMenu {
 
   show(): void {
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.hideRetreatConfirm();
   }
 

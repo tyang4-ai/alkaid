@@ -4,12 +4,19 @@ import { ALERT_BANNER_DURATION_MS, ALERT_MAX_VISIBLE, UnitType, UnitState, UnitC
 
 function createMockElement(): any {
   const children: any[] = [];
+  const classes = new Set<string>();
   const el: any = {
     className: '',
     style: { cssText: '', display: '', opacity: '' },
     textContent: '',
     innerHTML: '',
     parentElement: null as any,
+    classList: {
+      add(...names: string[]) { names.forEach(n => classes.add(n)); },
+      remove(...names: string[]) { names.forEach(n => classes.delete(n)); },
+      contains(name: string) { return classes.has(name); },
+      toggle(name: string) { classes.has(name) ? classes.delete(name) : classes.add(name); },
+    },
     appendChild(child: any) {
       child.parentElement = el;
       children.push(child);
@@ -28,6 +35,9 @@ function createMockElement(): any {
 }
 
 beforeEach(() => {
+  if (!globalThis.requestAnimationFrame) {
+    (globalThis as any).requestAnimationFrame = (cb: Function) => { cb(); return 0; };
+  }
   if (!globalThis.document) {
     (globalThis as any).document = {
       createElement: () => createMockElement(),

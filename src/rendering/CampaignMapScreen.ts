@@ -20,17 +20,20 @@ export class CampaignMapScreen {
       display:none;flex-direction:column;
       pointer-events:auto;font-family:'Segoe UI',Arial,sans-serif;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
     document.body.appendChild(this.overlay);
   }
 
   show(state: CampaignState, territoryManager: TerritoryManager): void {
     this.selectedTerritoryId = null;
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
     this.render(state, territoryManager);
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.overlay.innerHTML = '';
   }
 

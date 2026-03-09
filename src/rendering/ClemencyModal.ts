@@ -10,12 +10,14 @@ export class ClemencyModal {
       display:none;justify-content:center;align-items:center;
       pointer-events:auto;font-family:'Segoe UI',Arial,sans-serif;
     `;
+    this.overlay.classList.add('alkaid-modal', 'alkaid-hidden');
     document.body.appendChild(this.overlay);
   }
 
   show(capturedCount: number, onChoice: (accepted: boolean) => void): void {
     this.onChoice = onChoice;
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
 
     this.overlay.innerHTML = `
       <div style="
@@ -60,7 +62,8 @@ export class ClemencyModal {
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.overlay.innerHTML = '';
   }
 

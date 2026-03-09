@@ -21,11 +21,18 @@ if (!globalThis.window || !globalThis.window.addEventListener) {
 
 function createMockElement(): any {
   const children: any[] = [];
+  const classes = new Set<string>();
   return {
     className: '',
     style: { cssText: '', display: '', background: '', animation: '' },
     textContent: '',
     innerHTML: '',
+    classList: {
+      add(...names: string[]) { names.forEach(n => classes.add(n)); },
+      remove(...names: string[]) { names.forEach(n => classes.delete(n)); },
+      contains(name: string) { return classes.has(name); },
+      toggle(name: string) { classes.has(name) ? classes.delete(name) : classes.add(name); },
+    },
     appendChild(child: any) { children.push(child); return child; },
     remove: vi.fn(),
     addEventListener: vi.fn(),
@@ -34,6 +41,9 @@ function createMockElement(): any {
 }
 
 beforeEach(() => {
+  if (!globalThis.requestAnimationFrame) {
+    (globalThis as any).requestAnimationFrame = (cb: Function) => { cb(); return 0; };
+  }
   // Clear listeners
   for (const key of Object.keys(windowListeners)) {
     windowListeners[key] = [];
@@ -78,8 +88,8 @@ describe('BattleCinematic', () => {
     const promise = cine.play(VictoryType.SURRENDER);
     expect(cine.visible).toBe(true);
 
-    // Fast-forward to complete
-    vi.advanceTimersByTime(CINEMATIC_DURATION_MS + 100);
+    // Fast-forward past cinematic + 200ms fade-out transition
+    await vi.advanceTimersByTimeAsync(CINEMATIC_DURATION_MS + 300);
     await promise;
 
     expect(cine.visible).toBe(false);
@@ -100,6 +110,8 @@ describe('BattleCinematic', () => {
       keyHandlers[0]({ type: 'keydown', code: 'Space' });
     }
 
+    // Advance past 200ms fade-out transition in complete()
+    await vi.advanceTimersByTimeAsync(300);
     await promise;
     expect(cine.visible).toBe(false);
     cine.destroy();
@@ -116,7 +128,7 @@ describe('BattleCinematic', () => {
     const overlay = parent.children[0];
     expect(overlay.innerHTML).toContain('投降');
 
-    vi.advanceTimersByTime(CINEMATIC_DURATION_MS + 100);
+    await vi.advanceTimersByTimeAsync(CINEMATIC_DURATION_MS + 300);
     await promise;
     cine.destroy();
     vi.useRealTimers();

@@ -27,6 +27,7 @@ export class SaveLoadScreen {
       justify-content: center; align-items: center; flex-direction: column;
       pointer-events: auto;
     `;
+    this.overlay.classList.add('alkaid-overlay', 'alkaid-hidden');
 
     const panel = document.createElement('div');
     panel.style.cssText = `
@@ -108,11 +109,13 @@ export class SaveLoadScreen {
     this.titleEl.textContent = mode === 'save' ? '存檔 Save Game' : '讀檔 Load Game';
     this.newSaveBtn.style.display = mode === 'save' ? 'block' : 'none';
     this.overlay.style.display = 'flex';
+    requestAnimationFrame(() => this.overlay.classList.remove('alkaid-hidden'));
     await this.refresh();
   }
 
   hide(): void {
-    this.overlay.style.display = 'none';
+    this.overlay.classList.add('alkaid-hidden');
+    setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
     this.onClose?.();
   }
 

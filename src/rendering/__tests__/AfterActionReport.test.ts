@@ -4,11 +4,18 @@ import type { BattleMetrics } from '../../simulation/BattleEventLogger';
 
 function createMockElement(): any {
   const children: any[] = [];
+  const classes = new Set<string>();
   return {
     className: '',
     style: { cssText: '', display: '' },
     textContent: '',
     innerHTML: '',
+    classList: {
+      add(...names: string[]) { names.forEach(n => classes.add(n)); },
+      remove(...names: string[]) { names.forEach(n => classes.delete(n)); },
+      contains(name: string) { return classes.has(name); },
+      toggle(name: string) { classes.has(name) ? classes.delete(name) : classes.add(name); },
+    },
     appendChild(child: any) { children.push(child); return child; },
     remove: vi.fn(),
     addEventListener: vi.fn(),
@@ -22,6 +29,9 @@ function createMockElement(): any {
 }
 
 beforeEach(() => {
+  if (!globalThis.requestAnimationFrame) {
+    (globalThis as any).requestAnimationFrame = (cb: Function) => { cb(); return 0; };
+  }
   if (!globalThis.document) {
     (globalThis as any).document = {
       createElement: () => createMockElement(),
