@@ -142,9 +142,20 @@ async function main(): Promise<void> {
   let fogOfWarSystem = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
   const fogOfWarRenderer = new FogOfWarRenderer(renderer.fogLayer, renderer.pixiRenderer, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
 
+  // --- QoL: SettingsManager (hoisted — needed by AI system below) ---
+  const settingsManager = new SettingsManager();
+
   // AI System (Step 14, mutable — terrain-dependent)
   let aiFogOfWar = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);
-  let aiController: AIAdapter | AIController = new AIAdapter(1, AIPersonalityType.BALANCED, currentSeed, aiFogOfWar, terrainGrid);
+  const aiUnitLookup = (unitId: number) => {
+    const u = unitManager.get(unitId);
+    if (!u) return undefined;
+    return { type: u.type, team: u.team, x: u.x, y: u.y };
+  };
+  let aiController: AIAdapter | AIController = new AIAdapter(
+    1, AIPersonalityType.BALANCED, currentSeed, aiFogOfWar, terrainGrid,
+    eventBus, settingsManager, aiUnitLookup,
+  );
 
   // Metrics Systems (Step 9a, mutable — terrain-dependent)
   let fatigueSystem = new FatigueSystem(terrainGrid);
@@ -187,7 +198,6 @@ async function main(): Promise<void> {
   const battleCinematic = new BattleCinematic(container);
 
   // --- QoL Systems (Steps 14b-14f) ---
-  const settingsManager = new SettingsManager();
   const settingsScreen = new SettingsScreen(container, settingsManager);
   const perfMonitor = new PerfMonitor(container);
   const replayRecorder = new ReplayRecorder();
@@ -611,6 +621,20 @@ async function main(): Promise<void> {
   }
 
   function finishBattleProcessing(result: BattleResult): void {
+    // Step 16: Record player tendencies and train adaptation layer
+    if (aiController instanceof AIAdapter) {
+      aiController.tendencyTracker.recordBattleEnd();
+      const difficulty = settingsManager.get('difficulty');
+      if (aiController.difficultyManager.isAdaptationEnabled(difficulty)) {
+        const history = aiController.tendencyTracker.getHistory();
+        // Outcome: positive if AI won, negative if player won
+        const outcomes = history.map(() => result.won ? -1 : 1);
+        aiController.adaptationLayer.train(history, outcomes);
+        aiController.adaptationLayer.applyDecay(10);
+        aiController.adaptationLayer.saveWeights().catch(() => {});
+      }
+    }
+
     campaignManager.processBattleResult(result);
 
     // Check run end conditions
@@ -1168,7 +1192,10 @@ async function main(): Promise<void> {
       currentBattleTerritoryId,
       campaignManager.getState().seed,
     );
-    aiController = new AIAdapter(1, aiPersonality, currentSeed + 7777, aiFogOfWar, terrainGrid);
+    aiController = new AIAdapter(
+      1, aiPersonality, currentSeed + 7777, aiFogOfWar, terrainGrid,
+      eventBus, settingsManager, aiUnitLookup,
+    );
     aiController.initBattle(unitManager);
 
     // Step 10: Initialize alert system + show battle HUD + start event logging

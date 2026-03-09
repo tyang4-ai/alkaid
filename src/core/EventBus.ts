@@ -121,6 +121,9 @@ export interface GameEvents {
 
   // Step 14e: Performance
   'perf:toggled': { visible: boolean };
+
+  // Step 16: AI Adaptation
+  'tendency:updated': { features: Float32Array };
 }
 
 type EventKey = keyof GameEvents;

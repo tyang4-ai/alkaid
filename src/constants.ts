@@ -839,3 +839,31 @@ export const RL_TARGET_X_BINS = 20;
 export const RL_TARGET_Y_BINS = 15;
 export const RL_ORDER_TYPES = 10;
 export const RL_INFERENCE_TIMEOUT_MS = 5000;
+
+// --- Player Tendency Tracking (Step 16) ---
+export const TENDENCY_FEATURE_COUNT = 14;
+export const TENDENCY_HISTORY_MAX = 10;
+export const TENDENCY_MAP_CENTER_FRAC = 0.33;
+
+// --- Difficulty System (Step 16) ---
+export const DifficultyLevel = { EASY: 0, MEDIUM: 1, HARD: 2, BRUTAL: 3 } as const;
+export type DifficultyLevel = (typeof DifficultyLevel)[keyof typeof DifficultyLevel];
+
+export const DIFFICULTY_NAMES: Record<DifficultyLevel, string> = {
+  [DifficultyLevel.EASY]: '簡易 Easy',
+  [DifficultyLevel.MEDIUM]: '普通 Medium',
+  [DifficultyLevel.HARD]: '困難 Hard',
+  [DifficultyLevel.BRUTAL]: '殘酷 Brutal',
+};
+
+export const DIFFICULTY_CONFIG: Record<DifficultyLevel, {
+  temperature: number;
+  decisionIntervalMult: number;
+  adaptationEnabled: boolean;
+  preferRL: boolean;
+}> = {
+  [DifficultyLevel.EASY]: { temperature: 1.5, decisionIntervalMult: 1.5, adaptationEnabled: false, preferRL: false },
+  [DifficultyLevel.MEDIUM]: { temperature: 1.0, decisionIntervalMult: 1.0, adaptationEnabled: false, preferRL: false },
+  [DifficultyLevel.HARD]: { temperature: 0.7, decisionIntervalMult: 1.0, adaptationEnabled: true, preferRL: true },
+  [DifficultyLevel.BRUTAL]: { temperature: 0.5, decisionIntervalMult: 0.8, adaptationEnabled: true, preferRL: true },
+};

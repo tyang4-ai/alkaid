@@ -60,9 +60,10 @@ export class OnnxWorkerClient {
   /**
    * Run inference on an observation vector.
    * @param observation Float32Array of length 2582
+   * @param temperature Temperature for action sampling (default 1.0)
    * @returns Int32Array of length 96 (32 units × 3 sub-actions)
    */
-  async infer(observation: Float32Array): Promise<Int32Array> {
+  async infer(observation: Float32Array, temperature = 1.0): Promise<Int32Array> {
     if (!this.worker || !this.ready) {
       throw new Error('ONNX Worker not ready');
     }
@@ -77,7 +78,7 @@ export class OnnxWorkerClient {
       this.pending.set(id, { resolve, reject, timeout });
 
       this.worker!.postMessage(
-        { type: 'infer', id, observation },
+        { type: 'infer', id, observation, temperature },
         [observation.buffer],
       );
     });

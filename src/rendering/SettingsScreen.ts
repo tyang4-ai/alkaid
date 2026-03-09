@@ -1,5 +1,6 @@
 import type { SettingsManager } from '../core/SettingsManager';
-import { UI_SCALE_MIN, UI_SCALE_MAX, UI_SCALE_STEP } from '../constants';
+import { UI_SCALE_MIN, UI_SCALE_MAX, UI_SCALE_STEP, DifficultyLevel, DIFFICULTY_NAMES } from '../constants';
+import type { DifficultyLevel as DifficultyLevelType } from '../constants';
 
 export class SettingsScreen {
   private overlay: HTMLDivElement;
@@ -84,6 +85,21 @@ export class SettingsScreen {
             style="accent-color: #C9A84C; width: 18px; height: 18px;">
         </div>
 
+        <!-- Difficulty Section -->
+        <h3 style="color: #C9A84C; font-size: 14px; margin: 16px 0 8px;">Difficulty</h3>
+
+        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <label>AI Difficulty:</label>
+          <select id="settings-difficulty" style="
+            background: #2A1F14; color: #D4C4A0; border: 1px solid #8B7D3C;
+            padding: 4px 8px; font-size: 13px; border-radius: 2px;
+          ">
+            ${Object.entries(DIFFICULTY_NAMES).map(([val, name]) =>
+              `<option value="${val}" ${settings.difficulty === Number(val) ? 'selected' : ''}>${name}</option>`
+            ).join('\n            ')}
+          </select>
+        </div>
+
         <!-- Accessibility Section -->
         <h3 style="color: #C9A84C; font-size: 14px; margin: 16px 0 8px;">Accessibility</h3>
 
@@ -127,6 +143,10 @@ export class SettingsScreen {
 
     this.overlay.querySelector('#settings-high-contrast')!.addEventListener('change', (e) => {
       this.settingsManager.set('highContrast', (e.target as HTMLInputElement).checked);
+    });
+
+    this.overlay.querySelector('#settings-difficulty')!.addEventListener('change', (e) => {
+      this.settingsManager.set('difficulty', Number((e.target as HTMLSelectElement).value) as DifficultyLevelType);
     });
 
     this.overlay.querySelector('#settings-screen-reader')!.addEventListener('change', (e) => {

@@ -51,6 +51,13 @@ export interface AISnapshot {
   roleAssignments: AIRoleAssignmentSnapshot[];
 }
 
+// --- Adaptation Snapshot (Step 16) ---
+
+export interface AdaptationSnapshot {
+  weightsBlob: number[];  // Serialized Float32Array weights
+  tendencyHistory: number[][];  // Array of feature vectors
+}
+
 // --- Battle Snapshot ---
 
 export interface BattleSnapshot {
@@ -74,6 +81,7 @@ export interface BattleSnapshot {
   fogOfWar?: FogOfWarSnapshot;
   ai?: AISnapshot;
   aiFogOfWar?: FogOfWarSnapshot;
+  adaptation?: AdaptationSnapshot;
 }
 
 // --- Per-System Snapshots ---

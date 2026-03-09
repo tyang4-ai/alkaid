@@ -13,6 +13,7 @@ interface InferMessage {
   type: 'infer';
   id: number;
   observation: Float32Array;
+  temperature?: number;
 }
 
 type WorkerMessage = InitMessage | InferMessage;
@@ -50,7 +51,7 @@ async function initModel(modelUrl: string): Promise<void> {
   (self as unknown as Worker).postMessage({ type: 'ready' } as ReadyResult);
 }
 
-async function runInference(id: number, observation: Float32Array): Promise<void> {
+async function runInference(id: number, observation: Float32Array, temperature = 1.0): Promise<void> {
   if (!session || !ort) {
     (self as unknown as Worker).postMessage({
       type: 'error',
@@ -70,6 +71,14 @@ async function runInference(id: number, observation: Float32Array): Promise<void
     // Shape: [1, 96] = 32 units × 3 sub-actions (order_type, x_bin, y_bin)
     // We need to argmax each sub-action group
     const logits = results[Object.keys(results)[0]].data as Float32Array;
+
+    // Apply temperature scaling to logits (higher temp = more random = easier AI)
+    const temp = Math.max(0.1, temperature);
+    if (temp !== 1.0) {
+      for (let i = 0; i < logits.length; i++) {
+        logits[i] /= temp;
+      }
+    }
 
     // Decode: for each unit slot, pick the argmax of each sub-action
     const actions = new Int32Array(96); // 32 * 3
@@ -142,7 +151,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
       });
       break;
     case 'infer':
-      runInference(msg.id, msg.observation).catch((err) => {
+      runInference(msg.id, msg.observation, msg.temperature).catch((err) => {
         (self as unknown as Worker).postMessage({
           type: 'error',
           id: msg.id,

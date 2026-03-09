@@ -45,10 +45,22 @@ export class RLController {
   private onnxClient: OnnxWorkerClient;
   private lastDecisionTick = -999;
   private inferring = false;
+  private temperature = 1.0;
+  private decisionIntervalMult = 1.0;
 
   constructor(team: number, onnxClient: OnnxWorkerClient) {
     this.team = team;
     this.onnxClient = onnxClient;
+  }
+
+  /** Set temperature for action sampling (higher = more random = easier). */
+  setTemperature(temp: number): void {
+    this.temperature = Math.max(0.1, temp);
+  }
+
+  /** Scale the decision interval (>1 = slower decisions = easier). */
+  setDecisionIntervalMult(mult: number): void {
+    this.decisionIntervalMult = Math.max(0.1, mult);
   }
 
   async tick(
@@ -63,7 +75,8 @@ export class RLController {
   ): Promise<void> {
     if (isPaused) return;
     if (this.inferring) return;
-    if (currentTick - this.lastDecisionTick < RL_DECISION_INTERVAL) return;
+    const effectiveInterval = Math.round(RL_DECISION_INTERVAL * this.decisionIntervalMult);
+    if (currentTick - this.lastDecisionTick < effectiveInterval) return;
     if (!this.onnxClient.isReady()) return;
 
     this.lastDecisionTick = currentTick;
@@ -71,7 +84,7 @@ export class RLController {
 
     try {
       const obs = this.buildObservation(unitManager, supplySystem, surrenderSystem, env, currentTick);
-      const actions = await this.onnxClient.infer(obs);
+      const actions = await this.onnxClient.infer(obs, this.temperature);
       this.decodeAndDispatch(actions, unitManager, commandSystem, isPaused);
     } catch (err) {
       console.warn('RL inference failed:', err);

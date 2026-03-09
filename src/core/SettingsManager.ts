@@ -2,7 +2,9 @@ import { eventBus } from './EventBus';
 import {
   SAVE_SETTINGS_KEY, COLORBLIND_PALETTES,
   UI_SCALE_MIN, UI_SCALE_MAX,
+  DifficultyLevel,
 } from '../constants';
+import type { DifficultyLevel as DifficultyLevelType } from '../constants';
 
 export interface GameSettingsFull {
   colorblindMode: 'off' | 'deuteranopia' | 'protanopia' | 'tritanopia';
@@ -10,6 +12,7 @@ export interface GameSettingsFull {
   highContrast: boolean;
   hotkeyBindings: Record<string, string>;
   screenReaderHints: boolean;
+  difficulty: DifficultyLevelType;
 }
 
 const DEFAULT_HOTKEY_BINDINGS: Record<string, string> = {
@@ -33,6 +36,7 @@ const DEFAULT_SETTINGS: GameSettingsFull = {
   highContrast: false,
   hotkeyBindings: { ...DEFAULT_HOTKEY_BINDINGS },
   screenReaderHints: false,
+  difficulty: DifficultyLevel.MEDIUM,
 };
 
 export class SettingsManager {
@@ -106,6 +110,9 @@ export class SettingsManager {
           highContrast: parsed.highContrast ?? DEFAULT_SETTINGS.highContrast,
           hotkeyBindings: { ...DEFAULT_HOTKEY_BINDINGS, ...(parsed.hotkeyBindings ?? {}) },
           screenReaderHints: parsed.screenReaderHints ?? DEFAULT_SETTINGS.screenReaderHints,
+          difficulty: (parsed.difficulty != null && parsed.difficulty >= 0 && parsed.difficulty <= 3)
+            ? parsed.difficulty
+            : DEFAULT_SETTINGS.difficulty,
         };
       }
     } catch {

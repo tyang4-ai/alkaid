@@ -10,7 +10,7 @@ import { FogOfWarSystem } from '../FogOfWarSystem';
 import { TerrainGrid } from '../terrain/TerrainGrid';
 import type { AISnapshot } from '../persistence/SaveTypes';
 import { AIPhase } from './AITypes';
-import type { AIPersonalityType, UnitRoleAssignment, BattlefieldAssessment, TacticalRole } from './AITypes';
+import type { AIPersonalityType, PersonalityWeights, UnitRoleAssignment, BattlefieldAssessment, TacticalRole } from './AITypes';
 import { PERSONALITY_WEIGHTS } from './AIPersonality';
 import { AIPerception } from './AIPerception';
 import { AIRoleAssigner } from './AIRoleAssigner';
@@ -31,6 +31,9 @@ export class AIController {
   lastDecisionTick: number;
   initialUnitCount: number;
   roleAssignments: UnitRoleAssignment[];
+
+  /** Dynamic weights override, set by AIAdapter for difficulty/adaptation. */
+  private dynamicWeights: PersonalityWeights | null = null;
 
   constructor(
     team: number,
@@ -63,6 +66,11 @@ export class AIController {
     this.roleAssignments = [];
   }
 
+  /** Set dynamic weights override for difficulty/adaptation. Pass null to clear. */
+  setDynamicWeights(weights: PersonalityWeights | null): void {
+    this.dynamicWeights = weights;
+  }
+
   tick(
     currentTick: number,
     unitManager: UnitManager,
@@ -74,7 +82,7 @@ export class AIController {
   ): void {
     if (isPaused) return;
 
-    const weights = PERSONALITY_WEIGHTS[this.personality];
+    const weights = this.dynamicWeights ?? PERSONALITY_WEIGHTS[this.personality];
     const interval = weights.decisionInterval;
 
     if (currentTick - this.lastDecisionTick < interval) return;
@@ -125,7 +133,7 @@ export class AIController {
   }
 
   private updatePhase(assessment: BattlefieldAssessment, currentTick: number): void {
-    const weights = PERSONALITY_WEIGHTS[this.personality];
+    const weights = this.dynamicWeights ?? PERSONALITY_WEIGHTS[this.personality];
     const oldPhase = this.phase;
 
     // DESPERATE: check first (overrides everything)
