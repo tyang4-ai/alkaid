@@ -7,6 +7,7 @@ import {
   UNIT_BASE_DOT_RADIUS, UNIT_MIN_DOT_RADIUS,
   UNIT_TYPE_SHAPE, UNIT_SHAPE, TEAM_COLORS,
 } from '../constants';
+import { spriteManager } from './SpriteManager';
 
 // Texture size = 2 * radius + padding for stroke
 const TEX_SIZE = (UNIT_BASE_DOT_RADIUS + 2) * 2;
@@ -29,23 +30,40 @@ export class UnitRenderer {
     this.pixiRenderer = pixiRenderer;
   }
 
-  private getTexture(shape: number, color: number): Texture {
-    const key = texKey(shape, color);
+  private getTexture(shape: number, color: number, unitType?: number): Texture {
+    // Use unitType-color key if available (more specific for sprite lookup)
+    const key = unitType !== undefined ? `${unitType}-${color.toString(16)}` : texKey(shape, color);
     let tex = this.textures.get(key);
     if (tex) return tex;
 
+    // Try sprite manager first (Step 17c)
+    if (unitType !== undefined && spriteManager.isLoaded()) {
+      const spriteTex = spriteManager.getUnitTexture(unitType);
+      if (spriteTex) {
+        // Render tinted sprite into a RenderTexture
+        const s = new Sprite(spriteTex);
+        s.tint = color;
+        s.width = TEX_SIZE;
+        s.height = TEX_SIZE;
+        const rt = RenderTexture.create({ width: TEX_SIZE, height: TEX_SIZE });
+        this.pixiRenderer.render({ container: s, target: rt });
+        s.destroy();
+        this.textures.set(key, rt);
+        return rt;
+      }
+    }
+
+    // Fallback: geometric shape drawing
     const g = new Graphics();
     const r = UNIT_BASE_DOT_RADIUS;
     const cx = TEX_HALF;
     const cy = TEX_HALF;
 
-    // Draw shape
     switch (shape) {
       case UNIT_SHAPE.CIRCLE:
         g.circle(cx, cy, r);
         break;
       case UNIT_SHAPE.TRIANGLE: {
-        // Equilateral triangle pointing up
         const h = r * Math.sqrt(3);
         g.poly([
           cx, cy - r,
@@ -123,7 +141,7 @@ export class UnitRenderer {
       if (!sprite) {
         const shape = UNIT_TYPE_SHAPE[unit.type];
         const color = this.teamColor(unit.team);
-        const texture = this.getTexture(shape, color);
+        const texture = this.getTexture(shape, color, unit.type);
         sprite = new Sprite(texture);
         sprite.anchor.set(0.5);
         this.unitLayer.addChild(sprite);

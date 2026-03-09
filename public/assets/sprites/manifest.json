@@ -1,0 +1,42 @@
+{
+  "units": {
+    "ji_halberdiers": "units/ji_halberdiers.png",
+    "dao_swordsmen": "units/dao_swordsmen.png",
+    "nu_crossbowmen": "units/nu_crossbowmen.png",
+    "gong_archers": "units/gong_archers.png",
+    "light_cavalry": "units/light_cavalry.png",
+    "heavy_cavalry": "units/heavy_cavalry.png",
+    "horse_archers": "units/horse_archers.png",
+    "siege_engineers": "units/siege_engineers.png",
+    "elite_guard": "units/elite_guard.png",
+    "scouts": "units/scouts.png",
+    "meng_chong": "units/meng_chong.png",
+    "lou_chuan": "units/lou_chuan.png",
+    "fire_ships": "units/fire_ships.png",
+    "general": "units/general.png"
+  },
+  "terrain": {
+    "plains": ["terrain/plains_0.png", "terrain/plains_1.png", "terrain/plains_2.png", "terrain/plains_3.png"],
+    "forest": ["terrain/forest_0.png", "terrain/forest_1.png", "terrain/forest_2.png", "terrain/forest_3.png"],
+    "hills": ["terrain/hills_0.png", "terrain/hills_1.png", "terrain/hills_2.png", "terrain/hills_3.png"],
+    "mountains": ["terrain/mountains_0.png", "terrain/mountains_1.png", "terrain/mountains_2.png", "terrain/mountains_3.png"],
+    "water": ["terrain/water_0.png", "terrain/water_1.png", "terrain/water_2.png", "terrain/water_3.png"],
+    "ford": ["terrain/ford_0.png", "terrain/ford_1.png", "terrain/ford_2.png", "terrain/ford_3.png"],
+    "river": ["terrain/river_0.png", "terrain/river_1.png", "terrain/river_2.png", "terrain/river_3.png"],
+    "marsh": ["terrain/marsh_0.png", "terrain/marsh_1.png", "terrain/marsh_2.png", "terrain/marsh_3.png"],
+    "road": ["terrain/road_0.png", "terrain/road_1.png", "terrain/road_2.png", "terrain/road_3.png"],
+    "city": ["terrain/city_0.png", "terrain/city_1.png", "terrain/city_2.png", "terrain/city_3.png"]
+  },
+  "ui": {
+    "morale": "ui/morale.png",
+    "supply": "ui/supply.png",
+    "fatigue": "ui/fatigue.png",
+    "weather_clear": "ui/weather_clear.png",
+    "weather_rain": "ui/weather_rain.png",
+    "weather_fog": "ui/weather_fog.png",
+    "weather_wind": "ui/weather_wind.png",
+    "weather_snow": "ui/weather_snow.png",
+    "experience": "ui/experience.png",
+    "arrow": "ui/arrow.png"
+  }
+}

@@ -4,6 +4,7 @@ import { ContourGenerator } from '../simulation/terrain/ContourGenerator';
 import {
   TILE_SIZE, TERRAIN_COLORS, CONTOUR, TerrainType,
 } from '../constants';
+import { spriteManager } from './SpriteManager';
 
 export class TerrainRenderer {
   private terrainSprite: Sprite | null = null;
@@ -25,19 +26,48 @@ export class TerrainRenderer {
     const pixelH = grid.height * TILE_SIZE;
 
     // --- Terrain tile layer ---
-    const tileGraphics = new Graphics();
-    for (let y = 0; y < grid.height; y++) {
-      for (let x = 0; x < grid.width; x++) {
-        const terrainType = grid.getTerrain(x, y) as TerrainType;
-        const color = TERRAIN_COLORS[terrainType] ?? 0xFF00FF;
-        tileGraphics.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        tileGraphics.fill(color);
+    const useSprites = spriteManager.isLoaded();
+    const tileContainer = new Container();
+
+    if (useSprites) {
+      // Stamp sprite textures for each tile with variant hash
+      for (let y = 0; y < grid.height; y++) {
+        for (let x = 0; x < grid.width; x++) {
+          const terrainType = grid.getTerrain(x, y) as TerrainType;
+          const variant = ((x * 374761393 + y * 668265263 + grid.seed) >>> 0) % 4;
+          const tex = spriteManager.getTerrainTexture(terrainType, variant);
+          if (tex) {
+            const s = new Sprite(tex);
+            s.position.set(x * TILE_SIZE, y * TILE_SIZE);
+            s.width = TILE_SIZE;
+            s.height = TILE_SIZE;
+            tileContainer.addChild(s);
+          } else {
+            // Fallback: solid color rect
+            const g = new Graphics();
+            g.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            g.fill(TERRAIN_COLORS[terrainType] ?? 0xFF00FF);
+            tileContainer.addChild(g);
+          }
+        }
       }
+    } else {
+      // Fallback: solid-color rectangles (original behavior)
+      const g = new Graphics();
+      for (let y = 0; y < grid.height; y++) {
+        for (let x = 0; x < grid.width; x++) {
+          const terrainType = grid.getTerrain(x, y) as TerrainType;
+          const color = TERRAIN_COLORS[terrainType] ?? 0xFF00FF;
+          g.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          g.fill(color);
+        }
+      }
+      tileContainer.addChild(g);
     }
 
     const terrainTexture = RenderTexture.create({ width: pixelW, height: pixelH });
-    pixiRenderer.render({ container: tileGraphics, target: terrainTexture });
-    tileGraphics.destroy();
+    pixiRenderer.render({ container: tileContainer, target: terrainTexture });
+    tileContainer.destroy({ children: true });
 
     this.terrainSprite = new Sprite(terrainTexture);
     this.container.addChild(this.terrainSprite);
