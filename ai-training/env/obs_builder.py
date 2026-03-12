@@ -1,6 +1,6 @@
 """Observation builder — constructs flat float32 observation from game state.
 
-Layout: [own_units(32*40), enemy_units(32*40), global(22)] = 2582 features
+Layout: [own_units(32*40), enemy_units(32*40), global(22), tendency(14)] = 2596 features
 All values normalized to [0, 1] range.
 """
 from __future__ import annotations
@@ -20,7 +20,9 @@ _map = map_cfg()
 MAX_UNITS = _tc["MAX_UNITS_PER_TEAM"]  # 32
 UNIT_FEATURES = _tc["UNIT_FEATURES"]  # 40
 GLOBAL_FEATURES = _tc["GLOBAL_FEATURES"]  # 22
-OBS_SIZE = MAX_UNITS * UNIT_FEATURES * 2 + GLOBAL_FEATURES  # 2582
+TENDENCY_FEATURES = _tc["TENDENCY_FEATURES"]  # 14
+_BASE_OBS_SIZE = MAX_UNITS * UNIT_FEATURES * 2 + GLOBAL_FEATURES  # 2582
+OBS_SIZE = _BASE_OBS_SIZE + TENDENCY_FEATURES  # 2596
 
 _TILE_SIZE = _map["TILE_SIZE"]
 _MAP_W = _map["DEFAULT_MAP_WIDTH"]
@@ -35,8 +37,12 @@ _NUM_ORDERS = 9
 
 
 def build_observation(game: Game, team: int) -> np.ndarray:
-    """Build flat observation array for the given team."""
-    obs = np.zeros(OBS_SIZE, dtype=np.float32)
+    """Build flat observation array for the given team (2582 features, no tendency).
+
+    Kept for backward compatibility. Use build_observation_with_tendency() for
+    the full 2596-dim observation that includes player tendency conditioning.
+    """
+    obs = np.zeros(_BASE_OBS_SIZE, dtype=np.float32)
 
     own_units = [u for u in game.units if u.team == team and u.state != UnitState.DEAD]
     enemy_units = [u for u in game.units if u.team != team and u.state != UnitState.DEAD]
@@ -61,6 +67,29 @@ def build_observation(game: Game, team: int) -> np.ndarray:
     # Global features (22)
     _encode_global(obs, offset, game, team)
 
+    return obs
+
+
+def build_observation_with_tendency(
+    game: Game,
+    team: int,
+    tendencies: np.ndarray,
+) -> np.ndarray:
+    """Build full observation array including tendency features (2596 features).
+
+    Args:
+        game: Current game state.
+        team: Team index (0 or 1).
+        tendencies: Float array of shape (14,) with player tendency features,
+            each in [0, 1]. Comes from PlayerTendencyTracker.getFeatures().
+
+    Returns:
+        np.ndarray of shape (2596,) with dtype float32.
+    """
+    base_obs = build_observation(game, team)
+    obs = np.zeros(OBS_SIZE, dtype=np.float32)
+    obs[:_BASE_OBS_SIZE] = base_obs
+    obs[_BASE_OBS_SIZE:] = tendencies[:TENDENCY_FEATURES]
     return obs
 
 

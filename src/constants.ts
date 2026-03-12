@@ -830,7 +830,8 @@ export const PERF_UPDATE_INTERVAL_MS = 500;
 
 // --- RL AI (Hackathon) ---
 export const RL_MODEL_PATH = '/models/alkaid_ai.onnx';
-export const RL_OBS_SIZE = 2582; // 32*40*2 + 22
+export const RL_OBS_SIZE = 2596; // 32*40*2 + 22 + 14 (units + global + tendency)
+export const RL_TENDENCY_FEATURES = 14;
 export const RL_MAX_UNITS = 32;
 export const RL_UNIT_FEATURES = 40;
 export const RL_GLOBAL_FEATURES = 22;

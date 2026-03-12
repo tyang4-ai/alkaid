@@ -15,6 +15,7 @@ import type { SurrenderSystem } from '../combat/SurrenderSystem';
 import { OnnxWorkerClient } from '../../workers/OnnxWorkerClient';
 import {
   RL_OBS_SIZE,
+  RL_TENDENCY_FEATURES,
   RL_MAX_UNITS,
   RL_UNIT_FEATURES,
   RL_DECISION_INTERVAL,
@@ -72,6 +73,7 @@ export class RLController {
     surrenderSystem: SurrenderSystem,
     env: EnvironmentState | null,
     isPaused: boolean,
+    tendencyFeatures?: Float32Array | null,
   ): Promise<void> {
     if (isPaused) return;
     if (this.inferring) return;
@@ -83,7 +85,7 @@ export class RLController {
     this.inferring = true;
 
     try {
-      const obs = this.buildObservation(unitManager, supplySystem, surrenderSystem, env, currentTick);
+      const obs = this.buildObservation(unitManager, supplySystem, surrenderSystem, env, currentTick, tendencyFeatures);
       const actions = await this.onnxClient.infer(obs, this.temperature);
       this.decodeAndDispatch(actions, unitManager, commandSystem, isPaused);
     } catch (err) {
@@ -95,6 +97,7 @@ export class RLController {
 
   /**
    * Build flat Float32Array observation matching Python obs_builder.py format.
+   * Layout: [own_units(32*40), enemy_units(32*40), global(22), tendency(14)] = 2596
    */
   private buildObservation(
     unitManager: UnitManager,
@@ -102,6 +105,7 @@ export class RLController {
     surrenderSystem: SurrenderSystem,
     env: EnvironmentState | null,
     currentTick: number,
+    tendencyFeatures?: Float32Array | null,
   ): Float32Array {
     const obs = new Float32Array(RL_OBS_SIZE);
 
@@ -132,6 +136,15 @@ export class RLController {
 
     // Global features (22)
     this.encodeGlobal(obs, offset, allUnits, supplySystem, surrenderSystem, env, currentTick);
+    offset += 22; // RL_GLOBAL_FEATURES
+
+    // Tendency features (14) — appended at indices 2582..2595
+    if (tendencyFeatures && tendencyFeatures.length >= RL_TENDENCY_FEATURES) {
+      for (let i = 0; i < RL_TENDENCY_FEATURES; i++) {
+        obs[offset + i] = tendencyFeatures[i];
+      }
+    }
+    // If tendencyFeatures is null/undefined, these remain zero (safe default)
 
     return obs;
   }

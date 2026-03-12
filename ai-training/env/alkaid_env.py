@@ -4,8 +4,8 @@ Action space: MultiDiscrete([10, 20, 15] * 32) = 96 sub-actions
   Per unit slot: [order_type, target_x_bin, target_y_bin]
   Dead/routing units forced to NO_OP via action masking.
 
-Observation space: Box(shape=(2582,), float32)
-  [own_units(32*40), enemy_units(32*40), global(22)]
+Observation space: Box(shape=(2596,), float32)
+  [own_units(32*40), enemy_units(32*40), global(22), tendency(14)]
 
 Agent decides every DECISION_INTERVAL_TICKS (20) ticks.
 Max episode: MAX_EPISODE_STEPS (300) steps.
@@ -21,7 +21,7 @@ from gymnasium import spaces
 from shared.load_constants import training_cfg, map_cfg
 from env.types import Unit, UnitType, UnitState, OrderType, Order, UNIT_TYPE_CONFIGS
 from env.game import Game, ArmyConfig
-from env.obs_builder import build_observation, OBS_SIZE
+from env.obs_builder import build_observation, build_observation_with_tendency, OBS_SIZE, TENDENCY_FEATURES
 from env.reward import compute_reward, RewardState
 
 _tc = training_cfg()
@@ -113,6 +113,7 @@ class AlkaidEnv(gym.Env):
         self._reward_state = RewardState()
         self._step_count = 0
         self._own_units_order: list[Unit] = []  # sorted own units for action mapping
+        self._tendencies: np.ndarray = np.zeros(TENDENCY_FEATURES, dtype=np.float32)
 
     def reset(
         self,
@@ -145,7 +146,10 @@ class AlkaidEnv(gym.Env):
         self._step_count = 0
         self._update_unit_order()
 
-        obs = build_observation(self.game, self.team)
+        # Generate random tendency vector for this episode (domain randomization)
+        self._tendencies = np.random.uniform(0, 1, TENDENCY_FEATURES).astype(np.float32)
+
+        obs = build_observation_with_tendency(self.game, self.team, self._tendencies)
         info = self._build_info()
         return obs, info
 
@@ -176,7 +180,7 @@ class AlkaidEnv(gym.Env):
         self._update_unit_order()
 
         # Compute outputs
-        obs = build_observation(self.game, self.team)
+        obs = build_observation_with_tendency(self.game, self.team, self._tendencies)
         reward = compute_reward(self.game, self.team, self._reward_state)
         terminated = self.game.battle_ended
         truncated = self._step_count >= MAX_STEPS and not terminated
