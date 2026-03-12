@@ -2,6 +2,8 @@
  * Client for communicating with the backend agent API.
  */
 
+import { TemplateCommentary } from './TemplateCommentary';
+
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 
 export interface ChatMessage {
@@ -14,6 +16,20 @@ export interface ChatResponse {
   response: string;
   source: string;
   conversation_id?: string;
+}
+
+export interface ExplainDecisionContext {
+  order_type: string;
+  target_description: string;
+  battle_context: {
+    weather?: string;
+    time_of_day?: string;
+    own_casualties?: number;
+    enemy_casualties?: number;
+    morale?: string;
+    supply?: number;
+  };
+  tendency_features?: number[];
 }
 
 export interface SimulationResult {
@@ -78,6 +94,32 @@ export class AgentApiClient {
     });
     if (!res.ok) throw new Error(`Simulate failed: ${res.status}`);
     return res.json();
+  }
+
+  /**
+   * Request an AI decision explanation from the Sun Tzu agent.
+   * Falls back to TemplateCommentary when the API is unavailable.
+   */
+  async explainDecision(context: ExplainDecisionContext): Promise<string> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/explain-decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(context),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const data = await res.json();
+      return data.response;
+    } catch {
+      // Fallback to offline template commentary
+      return TemplateCommentary.get({
+        orderType: context.order_type,
+        weather: context.battle_context?.weather,
+        timeOfDay: context.battle_context?.time_of_day,
+        morale: context.battle_context?.morale as 'high' | 'medium' | 'low' | undefined,
+      });
+    }
   }
 
   resetConversation(): void {

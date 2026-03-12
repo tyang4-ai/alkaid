@@ -13,6 +13,7 @@ import type { SupplySystem } from '../metrics/SupplySystem';
 import type { EnvironmentState } from '../environment/EnvironmentState';
 import type { SurrenderSystem } from '../combat/SurrenderSystem';
 import { OnnxWorkerClient } from '../../workers/OnnxWorkerClient';
+import { eventBus } from '../../core/EventBus';
 import {
   RL_OBS_SIZE,
   RL_TENDENCY_FEATURES,
@@ -24,6 +25,8 @@ import {
   DEFAULT_MAP_WIDTH,
   DEFAULT_MAP_HEIGHT,
   TILE_SIZE,
+  ORDER_DISPLAY,
+  type OrderType,
 } from '../../constants';
 import sharedConstants from '../../../shared/constants.json';
 import { MCTSSearch } from '../mcts/MCTSSearch';
@@ -317,6 +320,9 @@ export class RLController {
       .filter((u: Unit) => u.team === this.team && u.state !== UNIT_STATE_DEAD)
       .sort((a: Unit, b: Unit) => a.id - b.id);
 
+    const issuedOrders: { unitId: number; type: number; targetX: number; targetY: number }[] = [];
+    const orderCounts = new Map<number, number>();
+
     for (let i = 0; i < RL_MAX_UNITS && i < ownUnits.length; i++) {
       const unit = ownUnits[i];
       if (unit.state === UNIT_STATE_ROUTING) continue;
@@ -335,12 +341,35 @@ export class RLController {
 
       // Issue order through command system (messenger delay applies)
       const order: Order = {
-        type: orderType as import('../../constants').OrderType,
+        type: orderType as OrderType,
         unitId: unit.id,
         targetX,
         targetY,
       };
       commandSystem.issueOrder(order, unitManager, isPaused);
+      issuedOrders.push({ unitId: unit.id, type: orderType, targetX, targetY });
+      orderCounts.set(orderType, (orderCounts.get(orderType) ?? 0) + 1);
+    }
+
+    // Emit decision event for commentary system
+    if (issuedOrders.length > 0) {
+      // Determine the dominant (most frequent) order type
+      let dominantType = 0;
+      let maxCount = 0;
+      for (const [type, count] of orderCounts) {
+        if (count > maxCount) {
+          maxCount = count;
+          dominantType = type;
+        }
+      }
+      const displayInfo = ORDER_DISPLAY[dominantType as OrderType];
+      const primaryOrder = displayInfo?.label?.toUpperCase() ?? 'MOVE';
+
+      eventBus.emit('ai:decisionMade', {
+        orders: issuedOrders,
+        primaryOrder,
+        tick: this.lastDecisionTick,
+      });
     }
   }
 }

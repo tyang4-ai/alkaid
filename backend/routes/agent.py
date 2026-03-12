@@ -1,6 +1,7 @@
 """Agent routes — proxy to DigitalOcean Gradient Agent Platform."""
 
 import os
+import random
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -28,6 +29,13 @@ class SuggestArmyRequest(BaseModel):
     terrain_type: str
     enemy_composition: list[dict]
     budget: int
+
+
+class ExplainDecisionRequest(BaseModel):
+    order_type: str
+    target_description: str
+    battle_context: dict
+    tendency_features: Optional[list[float]] = None
 
 
 @router.post("/chat")
@@ -101,6 +109,104 @@ async def suggest_army(req: SuggestArmyRequest):
     )
     chat_req = ChatRequest(message=message)
     return await chat(chat_req)
+
+
+_SUN_TZU_EXPLAIN_SYSTEM = (
+    "You are 孫武 (Sun Tzu), the legendary Chinese strategist and author of The Art of War. "
+    "You are advising a commander in a real-time ancient Chinese battle. "
+    "Explain the tactical reasoning behind the given order in your persona. "
+    "Reference historical battles and strategies (Red Cliffs, Guandu, Changping, Maling, Gaixia, etc.) when relevant. "
+    "If tendency_features are provided, comment briefly on how you are adapting to the player's patterns. "
+    "Mix Chinese (classical/military idioms) and English text naturally. "
+    "Keep your response to 2-3 sentences maximum. Be concise and authoritative."
+)
+
+# Fallback quotes keyed by order type when API is not configured
+_FALLBACK_QUOTES: dict[str, list[str]] = {
+    "ATTACK": [
+        "攻其不备，出其不意 — Strike where they are unprepared, appear where you are not expected. (The Art of War, Ch. 1)",
+        "兵贵神速 — In war, speed is paramount. Press the attack now.",
+    ],
+    "FLANK": [
+        "以正合，以奇胜 — Engage with the orthodox, achieve victory with the unorthodox. (The Art of War, Ch. 5)",
+        "声东击西 — Feint east, strike west. The flank reveals their weakness.",
+    ],
+    "RETREAT": [
+        "三十六计，走为上计 — Of the Thirty-Six Stratagems, retreat is the supreme strategy.",
+        "知难而退，智者之道 — Knowing when to retreat is the way of the wise.",
+    ],
+    "CHARGE": [
+        "一鼓作气，再而衰，三而竭 — The first drum raises spirits; the second, they wane; the third, they are spent. Charge on the first beat.",
+        "势如破竹 — Like splitting bamboo — unstoppable force.",
+    ],
+    "HOLD": [
+        "不动如山 — Immovable as a mountain. (The Art of War, Ch. 7)",
+        "以逸待劳 — Rest and await the weary. They will exhaust themselves.",
+    ],
+    "FORM_UP": [
+        "兵者，诡道也 — War is deception, but discipline is its instrument. Reform the lines.",
+        "纪律严明，阵法为先 — Strict discipline, formation first.",
+    ],
+    "RALLY": [
+        "集结旗下 — Rally to the banner! The army that holds together prevails.",
+        "军心未散，犹可一战 — The spirit holds; we can still fight.",
+    ],
+    "DISENGAGE": [
+        "金蝉脱壳 — Slip away like the golden cicada shedding its shell.",
+        "知不可战则勿战 — If you cannot win, do not fight. Break contact.",
+    ],
+    "MOVE": [
+        "善战者，致人而不致于人 — The skilled commander imposes his will, not the other way around. Reposition.",
+        "兵马未动，粮草先行 — Before troops move, supply moves first.",
+    ],
+}
+
+
+@router.post("/explain-decision")
+async def explain_decision(req: ExplainDecisionRequest):
+    """Explain an AI tactical decision in character as Sun Tzu."""
+    if not GRADIENT_AGENT_ENDPOINT or not GRADIENT_AGENT_KEY:
+        # Fallback: return a hardcoded Sun Tzu quote relevant to the order type
+        quotes = _FALLBACK_QUOTES.get(req.order_type.upper(), _FALLBACK_QUOTES["MOVE"])
+        return {"response": random.choice(quotes), "source": "fallback"}
+
+    try:
+        # Build context-enriched prompt
+        tendency_info = ""
+        if req.tendency_features:
+            tendency_info = f"\n[Player tendency features: {req.tendency_features[:6]}...]"
+
+        prompt = (
+            f"Order: {req.order_type}\n"
+            f"Target: {req.target_description}\n"
+            f"Battle context: {_format_context(req.battle_context)}"
+            f"{tendency_info}\n\n"
+            f"Explain why this tactical decision was made."
+        )
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                GRADIENT_AGENT_ENDPOINT,
+                headers={
+                    "Authorization": f"Bearer {GRADIENT_AGENT_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "message": prompt,
+                    "system": _SUN_TZU_EXPLAIN_SYSTEM,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        return {
+            "response": data.get("response", data.get("message", "")),
+            "source": "gradient",
+        }
+    except httpx.HTTPError:
+        # On API error, fall back to quotes
+        quotes = _FALLBACK_QUOTES.get(req.order_type.upper(), _FALLBACK_QUOTES["MOVE"])
+        return {"response": random.choice(quotes), "source": "fallback"}
 
 
 def _format_context(context: dict) -> str:

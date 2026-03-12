@@ -124,6 +124,9 @@ export interface GameEvents {
 
   // Step 16: AI Adaptation
   'tendency:updated': { features: Float32Array };
+
+  // AI Commentary (Step H+I)
+  'ai:decisionMade': { orders: { unitId: number; type: number; targetX: number; targetY: number }[]; primaryOrder: string; tick: number };
 }
 
 type EventKey = keyof GameEvents;
