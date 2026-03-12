@@ -1,6 +1,7 @@
 import type { SettingsManager } from '../core/SettingsManager';
 import { UI_SCALE_MIN, UI_SCALE_MAX, UI_SCALE_STEP, DifficultyLevel, DIFFICULTY_NAMES } from '../constants';
 import type { DifficultyLevel as DifficultyLevelType } from '../constants';
+import { AudioManager } from '../audio/AudioManager';
 
 export class SettingsScreen {
   private overlay: HTMLDivElement;
@@ -88,6 +89,51 @@ export class SettingsScreen {
             style="accent-color: #C9A84C; width: 18px; height: 18px;">
         </div>
 
+        <!-- Audio Section -->
+        <h3 style="color: #C9A84C; font-size: 14px; margin: 16px 0 8px;">音频 — Audio</h3>
+
+        <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <label>Master Volume: <span id="settings-master-vol-val">${Math.round(settings.masterVolume * 100)}%</span></label>
+          <input type="range" id="settings-master-vol"
+            min="0" max="100" step="1"
+            value="${Math.round(settings.masterVolume * 100)}"
+            style="width: 150px; accent-color: #C9A84C;"
+          >
+        </div>
+
+        <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <label>SFX Volume: <span id="settings-sfx-vol-val">${Math.round(settings.sfxVolume * 100)}%</span></label>
+          <input type="range" id="settings-sfx-vol"
+            min="0" max="100" step="1"
+            value="${Math.round(settings.sfxVolume * 100)}"
+            style="width: 150px; accent-color: #C9A84C;"
+          >
+        </div>
+
+        <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <label>Music Volume: <span id="settings-music-vol-val">${Math.round(settings.musicVolume * 100)}%</span></label>
+          <input type="range" id="settings-music-vol"
+            min="0" max="100" step="1"
+            value="${Math.round(settings.musicVolume * 100)}"
+            style="width: 150px; accent-color: #C9A84C;"
+          >
+        </div>
+
+        <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <label>Ambient Volume: <span id="settings-ambient-vol-val">${Math.round(settings.ambientVolume * 100)}%</span></label>
+          <input type="range" id="settings-ambient-vol"
+            min="0" max="100" step="1"
+            value="${Math.round(settings.ambientVolume * 100)}"
+            style="width: 150px; accent-color: #C9A84C;"
+          >
+        </div>
+
+        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <label>Mute All:</label>
+          <input type="checkbox" id="settings-audio-muted" ${settings.audioMuted ? 'checked' : ''}
+            style="accent-color: #C9A84C; width: 18px; height: 18px;">
+        </div>
+
         <!-- Difficulty Section -->
         <h3 style="color: #C9A84C; font-size: 14px; margin: 16px 0 8px;">Difficulty</h3>
 
@@ -154,6 +200,43 @@ export class SettingsScreen {
 
     this.overlay.querySelector('#settings-screen-reader')!.addEventListener('change', (e) => {
       this.settingsManager.set('screenReaderHints', (e.target as HTMLInputElement).checked);
+    });
+
+    // Audio slider bindings
+    const audio = AudioManager.getInstance();
+
+    this.overlay.querySelector('#settings-master-vol')!.addEventListener('input', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10) / 100;
+      this.settingsManager.set('masterVolume', val);
+      audio.setMasterVolume(val);
+      this.overlay.querySelector('#settings-master-vol-val')!.textContent = `${Math.round(val * 100)}%`;
+    });
+
+    this.overlay.querySelector('#settings-sfx-vol')!.addEventListener('input', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10) / 100;
+      this.settingsManager.set('sfxVolume', val);
+      audio.setSfxVolume(val);
+      this.overlay.querySelector('#settings-sfx-vol-val')!.textContent = `${Math.round(val * 100)}%`;
+    });
+
+    this.overlay.querySelector('#settings-music-vol')!.addEventListener('input', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10) / 100;
+      this.settingsManager.set('musicVolume', val);
+      audio.setMusicVolume(val);
+      this.overlay.querySelector('#settings-music-vol-val')!.textContent = `${Math.round(val * 100)}%`;
+    });
+
+    this.overlay.querySelector('#settings-ambient-vol')!.addEventListener('input', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10) / 100;
+      this.settingsManager.set('ambientVolume', val);
+      audio.setAmbientVolume(val);
+      this.overlay.querySelector('#settings-ambient-vol-val')!.textContent = `${Math.round(val * 100)}%`;
+    });
+
+    this.overlay.querySelector('#settings-audio-muted')!.addEventListener('change', (e) => {
+      const muted = (e.target as HTMLInputElement).checked;
+      this.settingsManager.set('audioMuted', muted);
+      audio.setMuted(muted);
     });
 
     this.overlay.querySelector('#settings-reset')!.addEventListener('click', () => {

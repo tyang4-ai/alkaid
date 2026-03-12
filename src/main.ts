@@ -95,6 +95,9 @@ import type { ReplaySnapshot } from './simulation/persistence/SaveTypes';
 import { AgentChatPanel } from './rendering/AgentChatPanel';
 import { LandingScreen } from './rendering/LandingScreen';
 
+// Audio system (Step 19)
+import { AudioManager } from './audio/AudioManager';
+
 type AppMode = 'campaign_ui' | 'battle' | 'replay';
 
 // ---------------------------------------------------------------------------
@@ -200,6 +203,25 @@ async function main(): Promise<void> {
 
   // --- QoL: SettingsManager (hoisted — needed by AI system below) ---
   const settingsManager = new SettingsManager();
+
+  // --- Audio System (Step 19) ---
+  const audioManager = AudioManager.getInstance();
+  audioManager.loadSettings({
+    masterVolume: settingsManager.get('masterVolume'),
+    sfxVolume: settingsManager.get('sfxVolume'),
+    musicVolume: settingsManager.get('musicVolume'),
+    ambientVolume: settingsManager.get('ambientVolume'),
+    muted: settingsManager.get('audioMuted'),
+  });
+
+  // Resume AudioContext on first user interaction (browser autoplay policy)
+  const resumeAudio = () => {
+    audioManager.init();
+    document.removeEventListener('click', resumeAudio);
+    document.removeEventListener('keydown', resumeAudio);
+  };
+  document.addEventListener('click', resumeAudio);
+  document.addEventListener('keydown', resumeAudio);
 
   // AI System (Step 14, mutable — terrain-dependent)
   let aiFogOfWar = new FogOfWarSystem(terrainGrid, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT);

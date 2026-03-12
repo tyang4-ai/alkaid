@@ -6,6 +6,12 @@ import {
 } from '../constants';
 import type { DifficultyLevel as DifficultyLevelType } from '../constants';
 
+/** Clamp a volume value to [0, 1], falling back to default if not a valid number. */
+function clampVolume(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || isNaN(value)) return fallback;
+  return Math.max(0, Math.min(1, value));
+}
+
 export interface GameSettingsFull {
   colorblindMode: 'off' | 'deuteranopia' | 'protanopia' | 'tritanopia';
   uiScale: number;
@@ -13,6 +19,12 @@ export interface GameSettingsFull {
   hotkeyBindings: Record<string, string>;
   screenReaderHints: boolean;
   difficulty: DifficultyLevelType;
+  // Audio settings
+  masterVolume: number;
+  sfxVolume: number;
+  musicVolume: number;
+  ambientVolume: number;
+  audioMuted: boolean;
 }
 
 const DEFAULT_HOTKEY_BINDINGS: Record<string, string> = {
@@ -37,6 +49,11 @@ const DEFAULT_SETTINGS: GameSettingsFull = {
   hotkeyBindings: { ...DEFAULT_HOTKEY_BINDINGS },
   screenReaderHints: false,
   difficulty: DifficultyLevel.MEDIUM,
+  masterVolume: 0.7,
+  sfxVolume: 0.8,
+  musicVolume: 0.5,
+  ambientVolume: 0.6,
+  audioMuted: false,
 };
 
 export class SettingsManager {
@@ -113,6 +130,11 @@ export class SettingsManager {
           difficulty: (parsed.difficulty != null && parsed.difficulty >= 0 && parsed.difficulty <= 3)
             ? parsed.difficulty
             : DEFAULT_SETTINGS.difficulty,
+          masterVolume: clampVolume(parsed.masterVolume, DEFAULT_SETTINGS.masterVolume),
+          sfxVolume: clampVolume(parsed.sfxVolume, DEFAULT_SETTINGS.sfxVolume),
+          musicVolume: clampVolume(parsed.musicVolume, DEFAULT_SETTINGS.musicVolume),
+          ambientVolume: clampVolume(parsed.ambientVolume, DEFAULT_SETTINGS.ambientVolume),
+          audioMuted: typeof parsed.audioMuted === 'boolean' ? parsed.audioMuted : DEFAULT_SETTINGS.audioMuted,
         };
       }
     } catch {
