@@ -26,6 +26,8 @@ import {
   TILE_SIZE,
 } from '../../constants';
 import sharedConstants from '../../../shared/constants.json';
+import { MCTSSearch } from '../mcts/MCTSSearch';
+import { createLightweightSnapshot } from '../mcts/LightweightSnapshot';
 
 const UNIT_STATE_DEAD = 5;
 const UNIT_STATE_ROUTING = 4;
@@ -49,6 +51,10 @@ export class RLController {
   private temperature = 1.0;
   private decisionIntervalMult = 1.0;
 
+  // MCTS for BRUTAL difficulty
+  private useMCTS = false;
+  private mctsSearch: MCTSSearch | null = null;
+
   constructor(team: number, onnxClient: OnnxWorkerClient) {
     this.team = team;
     this.onnxClient = onnxClient;
@@ -62,6 +68,11 @@ export class RLController {
   /** Scale the decision interval (>1 = slower decisions = easier). */
   setDecisionIntervalMult(mult: number): void {
     this.decisionIntervalMult = Math.max(0.1, mult);
+  }
+
+  /** Enable/disable MCTS search (for BRUTAL difficulty). */
+  setUseMCTS(enabled: boolean): void {
+    this.useMCTS = enabled;
   }
 
   async tick(
@@ -85,9 +96,29 @@ export class RLController {
     this.inferring = true;
 
     try {
-      const obs = this.buildObservation(unitManager, supplySystem, surrenderSystem, env, currentTick, tendencyFeatures);
-      const actions = await this.onnxClient.infer(obs, this.temperature);
-      this.decodeAndDispatch(actions, unitManager, commandSystem, isPaused);
+      if (this.useMCTS) {
+        // BRUTAL mode: use MCTS search for better decisions
+        if (!this.mctsSearch) {
+          this.mctsSearch = new MCTSSearch(this.onnxClient);
+        }
+        const snapshot = createLightweightSnapshot(
+          unitManager.getAllArray(),
+          currentTick,
+          env?.weather ?? 0,
+          env?.timeOfDay ?? 1,
+          supplySystem,
+          surrenderSystem,
+        );
+        const mctsActions = await this.mctsSearch.search(snapshot, this.team);
+        // Convert number[] to Int32Array for decodeAndDispatch
+        const actions = new Int32Array(mctsActions);
+        this.decodeAndDispatch(actions, unitManager, commandSystem, isPaused);
+      } else {
+        // Standard RL policy inference
+        const obs = this.buildObservation(unitManager, supplySystem, surrenderSystem, env, currentTick, tendencyFeatures);
+        const actions = await this.onnxClient.infer(obs, this.temperature);
+        this.decodeAndDispatch(actions, unitManager, commandSystem, isPaused);
+      }
     } catch (err) {
       console.warn('RL inference failed:', err);
     } finally {

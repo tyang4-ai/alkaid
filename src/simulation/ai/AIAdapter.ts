@@ -20,8 +20,7 @@ import type { FogOfWarSystem } from '../FogOfWarSystem';
 import type { TerrainGrid } from '../terrain/TerrainGrid';
 import type { SettingsManager } from '../../core/SettingsManager';
 import type { EventBus } from '../../core/EventBus';
-import { AI_TEAM, RL_MODEL_PATH, DIFFICULTY_CONFIG } from '../../constants';
-import type { DifficultyLevel } from '../../constants';
+import { AI_TEAM, RL_MODEL_PATH, DIFFICULTY_CONFIG, DifficultyLevel } from '../../constants';
 import type { AIPersonalityType, PersonalityWeights } from './AITypes';
 import type { AISnapshot } from '../persistence/SaveTypes';
 
@@ -96,6 +95,8 @@ export class AIAdapter {
     if (config.preferRL && this.rlReady && this.rlController) {
       this.rlController.setTemperature(this.difficultyManager.getTemperature(difficulty));
       this.rlController.setDecisionIntervalMult(config.decisionIntervalMult);
+      // Enable MCTS for BRUTAL difficulty
+      this.rlController.setUseMCTS(difficulty === DifficultyLevel.BRUTAL);
       await this.rlController.tick(
         currentTick, unitManager, commandSystem, orderManager,
         supplySystem, surrenderSystem, env, isPaused,

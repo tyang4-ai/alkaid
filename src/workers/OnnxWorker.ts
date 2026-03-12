@@ -16,12 +16,27 @@ interface InferMessage {
   temperature?: number;
 }
 
-type WorkerMessage = InitMessage | InferMessage;
+interface InferWithValueMessage {
+  type: 'inferWithValue';
+  id: number;
+  observation: Float32Array;
+  temperature?: number;
+}
+
+type WorkerMessage = InitMessage | InferMessage | InferWithValueMessage;
 
 interface InferResult {
   type: 'inferResult';
   id: number;
   actions: Int32Array;
+}
+
+interface InferWithValueResult {
+  type: 'inferWithValueResult';
+  id: number;
+  actions: Int32Array;
+  logits: Float32Array;
+  value: number;
 }
 
 interface ErrorResult {
@@ -63,14 +78,16 @@ async function runInference(id: number, observation: Float32Array, temperature =
 
   try {
     const inputTensor = new ort.Tensor('float32', observation, [1, observation.length]);
-    const feeds: Record<string, any> = { obs: inputTensor };
+    // Use dynamic input name from model metadata instead of hardcoded 'obs'
+    const inputName = session.inputNames[0] ?? 'obs';
+    const feeds: Record<string, any> = { [inputName]: inputTensor };
 
     const results = await session.run(feeds);
 
     // The model outputs action logits for each sub-action
-    // Shape: [1, 96] = 32 units × 3 sub-actions (order_type, x_bin, y_bin)
+    // Shape: [1, 1440] = 32 units × (10 order types + 20 x bins + 15 y bins)
     // We need to argmax each sub-action group
-    const logits = results[Object.keys(results)[0]].data as Float32Array;
+    const logits = results[session.outputNames[0]].data as Float32Array;
 
     // Apply temperature scaling to logits (higher temp = more random = easier AI)
     const temp = Math.max(0.1, temperature);
@@ -138,6 +155,99 @@ async function runInference(id: number, observation: Float32Array, temperature =
   }
 }
 
+async function runInferenceWithValue(id: number, observation: Float32Array, temperature = 1.0): Promise<void> {
+  if (!session || !ort) {
+    (self as unknown as Worker).postMessage({
+      type: 'error',
+      id,
+      message: 'Model not initialized',
+    } as ErrorResult);
+    return;
+  }
+
+  try {
+    const inputTensor = new ort.Tensor('float32', observation, [1, observation.length]);
+    const inputName = session.inputNames[0] ?? 'obs';
+    const feeds: Record<string, any> = { [inputName]: inputTensor };
+
+    const results = await session.run(feeds);
+
+    const logits = results[session.outputNames[0]].data as Float32Array;
+
+    // Extract value head if model has one
+    const value = session.outputNames.length > 1
+      ? (results[session.outputNames[1]].data as Float32Array)[0]
+      : 0;
+
+    // Apply temperature scaling
+    const temp = Math.max(0.1, temperature);
+    const scaledLogits = new Float32Array(logits.length);
+    for (let i = 0; i < logits.length; i++) {
+      scaledLogits[i] = logits[i] / temp;
+    }
+
+    // Decode actions (same as runInference)
+    const actions = new Int32Array(96);
+    const ORDER_TYPES = 10;
+    const X_BINS = 20;
+    const Y_BINS = 15;
+
+    let logitIdx = 0;
+    for (let unit = 0; unit < 32; unit++) {
+      let bestOrder = 0;
+      let bestVal = scaledLogits[logitIdx];
+      for (let j = 1; j < ORDER_TYPES; j++) {
+        if (scaledLogits[logitIdx + j] > bestVal) {
+          bestVal = scaledLogits[logitIdx + j];
+          bestOrder = j;
+        }
+      }
+      actions[unit * 3] = bestOrder;
+      logitIdx += ORDER_TYPES;
+
+      let bestX = 0;
+      bestVal = scaledLogits[logitIdx];
+      for (let j = 1; j < X_BINS; j++) {
+        if (scaledLogits[logitIdx + j] > bestVal) {
+          bestVal = scaledLogits[logitIdx + j];
+          bestX = j;
+        }
+      }
+      actions[unit * 3 + 1] = bestX;
+      logitIdx += X_BINS;
+
+      let bestY = 0;
+      bestVal = scaledLogits[logitIdx];
+      for (let j = 1; j < Y_BINS; j++) {
+        if (scaledLogits[logitIdx + j] > bestVal) {
+          bestVal = scaledLogits[logitIdx + j];
+          bestY = j;
+        }
+      }
+      actions[unit * 3 + 2] = bestY;
+      logitIdx += Y_BINS;
+    }
+
+    // Return raw logits (unscaled) + decoded actions + value
+    (self as unknown as Worker).postMessage(
+      {
+        type: 'inferWithValueResult',
+        id,
+        actions,
+        logits: new Float32Array(logits), // Copy since original may be from WASM
+        value,
+      } as InferWithValueResult,
+      [actions.buffer],
+    );
+  } catch (err) {
+    (self as unknown as Worker).postMessage({
+      type: 'error',
+      id,
+      message: (err as Error).message,
+    } as ErrorResult);
+  }
+}
+
 self.onmessage = (event: MessageEvent<WorkerMessage>) => {
   const msg = event.data;
   switch (msg.type) {
@@ -152,6 +262,15 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
       break;
     case 'infer':
       runInference(msg.id, msg.observation, msg.temperature).catch((err) => {
+        (self as unknown as Worker).postMessage({
+          type: 'error',
+          id: msg.id,
+          message: (err as Error).message,
+        } as ErrorResult);
+      });
+      break;
+    case 'inferWithValue':
+      runInferenceWithValue(msg.id, msg.observation, msg.temperature).catch((err) => {
         (self as unknown as Worker).postMessage({
           type: 'error',
           id: msg.id,
