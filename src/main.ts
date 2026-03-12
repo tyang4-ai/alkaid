@@ -97,6 +97,62 @@ import { LandingScreen } from './rendering/LandingScreen';
 
 type AppMode = 'campaign_ui' | 'battle' | 'replay';
 
+// ---------------------------------------------------------------------------
+// Global error handler — catch uncaught errors and show user-friendly overlay
+// ---------------------------------------------------------------------------
+window.onerror = (message, source, lineno, colno, error) => {
+  console.error('[Alkaid Fatal]', { message, source, lineno, colno, error });
+  showErrorOverlay(String(message), error?.stack);
+  return true; // Prevent default browser error handling
+};
+
+window.onunhandledrejection = (event: PromiseRejectionEvent) => {
+  console.error('[Alkaid Unhandled Promise]', event.reason);
+  showErrorOverlay(
+    event.reason?.message || String(event.reason),
+    event.reason?.stack,
+  );
+};
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function showErrorOverlay(message: string, stack?: string): void {
+  // Only show once — don't spam
+  if (document.getElementById('alkaid-error-overlay')) return;
+
+  const safeMessage = escapeHtml(message);
+  const safeStack = stack ? escapeHtml(stack) : '';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'alkaid-error-overlay';
+  overlay.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(26, 26, 46, 0.95); z-index: 99999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #D4C4A0; font-family: 'Noto Serif SC', serif; padding: 2rem;
+  `;
+  overlay.innerHTML = `
+    <h1 style="font-size: 2rem; margin-bottom: 1rem; color: #C75050;">&#9888; 破军 — Fatal Error</h1>
+    <p style="font-size: 1.1rem; margin-bottom: 1rem; max-width: 600px; text-align: center;">
+      ${safeMessage}
+    </p>
+    ${safeStack ? `<pre style="font-size: 0.75rem; max-width: 80%; overflow: auto; background: #111; padding: 1rem; border-radius: 4px; color: #888; max-height: 200px;">${safeStack}</pre>` : ''}
+    <button onclick="location.reload()" style="
+      margin-top: 1.5rem; padding: 0.75rem 2rem; background: #8B2500;
+      color: #D4C4A0; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 1rem; font-family: inherit;
+    ">重新加载 Reload</button>
+  `;
+  document.body.appendChild(overlay);
+}
+
 async function main(): Promise<void> {
   const container = document.getElementById('game-container');
   if (!container) throw new Error('Missing #game-container');

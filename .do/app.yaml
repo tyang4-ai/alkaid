@@ -1,0 +1,10 @@
+name: alkaid
+static_sites:
+  - name: alkaid-web
+    source_dir: /
+    build_command: npm install -g pnpm && pnpm install && pnpm build
+    output_dir: dist
+    environment_slug: node-js
+    routes:
+      - path: /
+    catchall_document: index.html
