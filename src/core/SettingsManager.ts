@@ -25,6 +25,8 @@ export interface GameSettingsFull {
   musicVolume: number;
   ambientVolume: number;
   audioMuted: boolean;
+  // Tutorial
+  tutorialSeen: boolean;
 }
 
 const DEFAULT_HOTKEY_BINDINGS: Record<string, string> = {
@@ -54,6 +56,7 @@ const DEFAULT_SETTINGS: GameSettingsFull = {
   musicVolume: 0.5,
   ambientVolume: 0.6,
   audioMuted: false,
+  tutorialSeen: false,
 };
 
 export class SettingsManager {
@@ -135,6 +138,7 @@ export class SettingsManager {
           musicVolume: clampVolume(parsed.musicVolume, DEFAULT_SETTINGS.musicVolume),
           ambientVolume: clampVolume(parsed.ambientVolume, DEFAULT_SETTINGS.ambientVolume),
           audioMuted: typeof parsed.audioMuted === 'boolean' ? parsed.audioMuted : DEFAULT_SETTINGS.audioMuted,
+          tutorialSeen: typeof parsed.tutorialSeen === 'boolean' ? parsed.tutorialSeen : DEFAULT_SETTINGS.tutorialSeen,
         };
       }
     } catch {

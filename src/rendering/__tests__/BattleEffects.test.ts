@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, vi } from 'vitest';
 
 vi.mock('pixi.js', () => ({
   Container: class { addChild() {} removeChild() {} },
   Graphics: class {
     visible = true; alpha = 1; position = { x: 0, y: 0, set(x: number, y: number) { this.x = x; this.y = y; } };
-    scale = { set(s: number) {} };
+    scale = { set(_s: number) {} };
     clear() { return this; } circle() { return this; } fill() { return this; } stroke() { return this; }
     moveTo() { return this; } lineTo() { return this; }
     destroy() {}

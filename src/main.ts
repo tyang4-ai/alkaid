@@ -98,6 +98,12 @@ import { LandingScreen } from './rendering/LandingScreen';
 // Audio system (Step 19)
 import { AudioManager } from './audio/AudioManager';
 
+// UX improvements (Final Polish)
+import { TutorialOverlay } from './rendering/TutorialOverlay';
+import { LoadingScreen } from './rendering/LoadingScreen';
+import { BattleLogPanel } from './rendering/BattleLogPanel';
+import { KeyboardHelpPopup } from './rendering/KeyboardHelpPopup';
+
 type AppMode = 'campaign_ui' | 'battle' | 'replay';
 
 // ---------------------------------------------------------------------------
@@ -283,6 +289,12 @@ async function main(): Promise<void> {
   let replayControls: ReplayControls | null = null;
   let lastReplaySnapshot: ReplaySnapshot | null = null;
 
+  // --- UX Improvements (Final Polish) ---
+  const tutorialOverlay = new TutorialOverlay();
+  const loadingScreen = new LoadingScreen();
+  const battleLogPanel = new BattleLogPanel(container);
+  const keyboardHelpPopup = new KeyboardHelpPopup();
+
   // Web Worker for pathfinding (initialized after terrainGrid)
   const pathWorkerClient = new PathWorkerClient();
   pathWorkerClient.initTerrain(terrainGrid.terrain, terrainGrid.width, terrainGrid.height);
@@ -321,6 +333,8 @@ async function main(): Promise<void> {
   hotkeyManager.setCodexToggle(() => codex.toggle());
   hotkeyManager.setPerfMonitorToggle(() => perfMonitor.toggle());
   hotkeyManager.setChatPanelToggle(() => agentChatPanel.toggle());
+  hotkeyManager.setBattleLogToggle(() => battleLogPanel.toggle());
+  hotkeyManager.setKeyboardHelpToggle(() => keyboardHelpPopup.toggle());
   hotkeyManager.setEscapeAction(() => {
     if (deploymentManager.phase === DeploymentPhase.BATTLE && !battleEnded) {
       pauseMenu.showRetreatConfirm(() => {
@@ -537,6 +551,9 @@ async function main(): Promise<void> {
     currentBattleTerritoryId = territoryId;
     appMode = 'battle';
 
+    // Show loading screen during terrain generation
+    loadingScreen.show('生成地形... Generating terrain');
+
     // Hide all campaign screens
     campaignMapScreen.hide();
     campScreen.hide();
@@ -544,6 +561,7 @@ async function main(): Promise<void> {
 
     // Reset battle state
     resetBattleSystems();
+    battleLogPanel.clear();
 
     // Generate terrain for this territory
     regenerateTerrain(state.seed + state.turn * 100 + territory.id.length, territory.terrainTemplate);
@@ -582,6 +600,9 @@ async function main(): Promise<void> {
 
     // Ensure renderer is showing battle visuals
     renderer.render(0);
+
+    // Hide loading screen now that terrain + deployment are ready
+    loadingScreen.hide();
 
     // Stop any previous loop, then start fresh for this battle
     gameLoop.stop();
@@ -1114,7 +1135,7 @@ async function main(): Promise<void> {
     camera.update(frameDt);
     renderer.applyCamera(camera);
 
-    unitRenderer.update(unitManager.getAll(), alpha, fogOfWarSystem.getVisibleEnemyIds());
+    unitRenderer.update(unitManager.getAll(), alpha, fogOfWarSystem.getVisibleEnemyIds(), camera.zoom);
     fogOfWarRenderer.update(fogOfWarSystem);
     selectionRenderer.update(
       selectionManager, (id) => unitManager.get(id), alpha, frameDt,
@@ -1281,6 +1302,7 @@ async function main(): Promise<void> {
     battleHUD.show();
     battleEventLogger.startLogging(battleStartTick);
     hotkeyManager.setBattleActive(true);
+
 
     // QoL: Show minimap, start replay recording
     minimap.show();
@@ -1689,6 +1711,14 @@ async function main(): Promise<void> {
   const landingScreen = new LandingScreen();
 
   const startCampaignFlow = async () => {
+    // Show tutorial on first campaign start
+    if (!settingsManager.get('tutorialSeen')) {
+      tutorialOverlay.setDontShowAgainCallback((val) => {
+        settingsManager.set('tutorialSeen', val);
+      });
+      await new Promise<void>((resolve) => tutorialOverlay.show(resolve));
+    }
+
     // Check for existing campaign save
     const hasCampaign = await saveManager.hasCampaignSave();
     if (hasCampaign) {

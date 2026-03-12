@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RetreatSystem } from '../RetreatSystem';
-import { EventBus, eventBus } from '../../core/EventBus';
-import { OrderType, UnitState, RETREAT_EVACUATION_TICKS, STALEMATE_DETECTION_TICKS, STALEMATE_CASUALTY_THRESHOLD } from '../../constants';
+import { eventBus } from '../../core/EventBus';
+import { OrderType, UnitState, RETREAT_EVACUATION_TICKS, STALEMATE_DETECTION_TICKS } from '../../constants';
 
 function createMockUnitManager(teamUnits: Array<{ id: number; team: number; state: number; size: number; maxSize: number }>): any {
   return {

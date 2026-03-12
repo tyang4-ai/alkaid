@@ -13,10 +13,8 @@ interface Particle {
 export class BattleEffects {
   private pool: Graphics[] = [];
   private active: Particle[] = [];
-  private effectLayer: Container;
 
   constructor(effectLayer: Container) {
-    this.effectLayer = effectLayer;
     // Pre-allocate pool
     for (let i = 0; i < 200; i++) {
       const g = new Graphics();
@@ -28,7 +26,7 @@ export class BattleEffects {
   }
 
   private subscribe(): void {
-    eventBus.on('combat:chargeImpact', ({ unitId, targetId, damage }) => {
+    eventBus.on('combat:chargeImpact', (_data: { unitId: number; targetId: number; damage: number }) => {
       // We don't have unit positions here, so we'll use a simple burst
       // In practice, main.ts would need to pass coordinates
     });

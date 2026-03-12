@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SupplySystem } from '../SupplySystem';
 import { UnitManager } from '../../units/UnitManager';
-import { UnitType, UnitState, TerrainType, SUPPLY_BASE_CAPACITY } from '../../../constants';
+import { UnitType, UnitState, TerrainType } from '../../../constants';
 import { TerrainGrid } from '../../terrain/TerrainGrid';
 import { eventBus } from '../../../core/EventBus';
 

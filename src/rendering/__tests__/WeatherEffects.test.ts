@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, vi } from 'vitest';
 
 vi.mock('pixi.js', () => ({
   Container: class { addChild() {} removeChild() {} },

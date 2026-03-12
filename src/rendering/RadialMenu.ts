@@ -128,7 +128,6 @@ export class RadialMenu {
         .stroke({ width: 1, color: RADIAL_MENU_BORDER_COLOR, alpha: 0.5 });
 
       // Colored accent line on outer edge of wedge
-      const midAngle = startAngle + WEDGE_ANGLE / 2;
       const accentPad = 0.04; // slight inset from wedge edges
       this.wedgeGraphics
         .arc(0, 0, r - 1, startAngle + accentPad, endAngle - accentPad)

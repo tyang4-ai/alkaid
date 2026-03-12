@@ -6,7 +6,7 @@ export type OneShotSoundMethod = 'swordClash' | 'arrowVolley' | 'cavalryCharge'
   | 'hornSignal' | 'drumBeat' | 'uiClick';
 
 /** Looping/ambient sounds that return a stop handle. */
-export type LoopingSoundMethod = 'rain' | 'wind' | 'battleDrums';
+export type LoopingSoundMethod = 'rain' | 'wind' | 'battleDrums' | 'battleMusic';
 
 /** All sound methods on AudioPlaceholders. */
 export type SoundMethod = OneShotSoundMethod | LoopingSoundMethod;
@@ -23,7 +23,7 @@ export const ONE_SHOT_SOUNDS: Record<string, OneShotSoundMethod> = {
 };
 
 export const LOOPING_SOUNDS: Record<string, LoopingSoundMethod> = {
-  'battle_theme': 'battleDrums',
+  'battle_theme': 'battleMusic',
   'rain': 'rain',
   'wind': 'wind',
 };

@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { UnitInfoPanel } from '../UnitInfoPanel';
 import { UnitManager } from '../../simulation/units/UnitManager';
 import { SelectionManager } from '../../simulation/SelectionManager';
-import { UnitType, UnitState } from '../../constants';
+import { UnitType } from '../../constants';
 
 describe('UnitInfoPanel', () => {
   let panel: UnitInfoPanel;

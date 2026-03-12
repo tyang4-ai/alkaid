@@ -32,6 +32,8 @@ export class HotkeyManager {
   private onCodexToggle: (() => void) | null = null;
   private onPerfMonitorToggle: (() => void) | null = null;
   private onChatPanelToggle: (() => void) | null = null;
+  private onBattleLogToggle: (() => void) | null = null;
+  private onKeyboardHelpToggle: (() => void) | null = null;
   private _battleActive = false;
 
   constructor(
@@ -70,6 +72,13 @@ export class HotkeyManager {
     this.onChatPanelToggle = fn;
   }
 
+  setBattleLogToggle(fn: () => void): void {
+    this.onBattleLogToggle = fn;
+  }
+
+  setKeyboardHelpToggle(fn: () => void): void {
+    this.onKeyboardHelpToggle = fn;
+  }
 
   setBattleActive(active: boolean): void {
     this._battleActive = active;
@@ -119,6 +128,20 @@ export class HotkeyManager {
     if (e.code === 'KeyT' && this.selectionManager.count === 0) {
       e.preventDefault();
       this.onChatPanelToggle?.();
+      return;
+    }
+
+    // L: toggle battle log panel
+    if (e.code === 'KeyL' && this.selectionManager.count === 0) {
+      e.preventDefault();
+      this.onBattleLogToggle?.();
+      return;
+    }
+
+    // ?: toggle keyboard help popup (Shift + / on most keyboards)
+    if (e.code === 'Slash' && e.shiftKey) {
+      e.preventDefault();
+      this.onKeyboardHelpToggle?.();
       return;
     }
 

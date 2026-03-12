@@ -5,7 +5,7 @@ import type { TerrainGrid } from '../terrain/TerrainGrid';
 import type { EnvironmentState } from '../environment/EnvironmentState';
 import { eventBus } from '../../core/EventBus';
 import {
-  UnitType, UnitState, OrderType, TerrainType,
+  UnitType, UnitState, OrderType,
   COMMAND_RADIUS_FRACTION, DEFAULT_MAP_WIDTH, TILE_SIZE,
   GENERAL_NEARBY_MORALE_PER_TICK,
   ROUT_CASCADE_RADIUS_TILES, ROUT_CASCADE_MORALE_HIT,

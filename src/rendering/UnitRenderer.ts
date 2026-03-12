@@ -8,6 +8,7 @@ import {
   UNIT_TYPE_SHAPE, UNIT_SHAPE, TEAM_COLORS,
 } from '../constants';
 import { spriteManager } from './SpriteManager';
+import { ExperienceSystem } from '../simulation/metrics/ExperienceSystem';
 
 // Texture size = 2 * radius + padding for stroke
 const TEX_SIZE = (UNIT_BASE_DOT_RADIUS + 2) * 2;
@@ -18,11 +19,18 @@ function texKey(shape: number, color: number): string {
   return `${shape}-${color.toString(16)}`;
 }
 
+// Veterancy badge constants
+const BADGE_PIP_RADIUS = 1.5;
+const BADGE_PIP_SPACING = 4;
+const BADGE_COLOR = 0xFFD700; // Gold
+const BADGE_ZOOM_THRESHOLD = 1.5;
+
 export class UnitRenderer {
   private unitLayer: Container;
   private pixiRenderer: PixiRenderer;
   private textures = new Map<string, Texture>();
   private sprites = new Map<number, Sprite>();
+  private badges = new Map<number, Graphics>();
   private colorOverrides: { player: number; enemy: number } | null = null;
 
   constructor(unitLayer: Container, pixiRenderer: PixiRenderer) {
@@ -121,8 +129,9 @@ export class UnitRenderer {
     return TEAM_COLORS.NEUTRAL;
   }
 
-  update(units: IterableIterator<Unit>, alpha: number, visibleEnemyIds?: Set<number>): void {
+  update(units: IterableIterator<Unit>, alpha: number, visibleEnemyIds?: Set<number>, cameraZoom?: number): void {
     const seenIds = new Set<number>();
+    const showBadges = (cameraZoom ?? 1) >= BADGE_ZOOM_THRESHOLD;
 
     for (const unit of units) {
       if (unit.state === 5) continue; // DEAD
@@ -131,6 +140,8 @@ export class UnitRenderer {
       if (unit.team !== 0 && visibleEnemyIds && !visibleEnemyIds.has(unit.id)) {
         const hiddenSprite = this.sprites.get(unit.id);
         if (hiddenSprite) hiddenSprite.visible = false;
+        const hiddenBadge = this.badges.get(unit.id);
+        if (hiddenBadge) hiddenBadge.visible = false;
         seenIds.add(unit.id); // Keep sprite alive, just hidden
         continue;
       }
@@ -164,6 +175,30 @@ export class UnitRenderer {
 
       // Opacity: weak squads fade
       sprite.alpha = 0.3 + 0.7 * strengthRatio;
+
+      // Veterancy badges: gold pips below unit (only at high zoom)
+      const tier = ExperienceSystem.getTier(unit.experience);
+      if (showBadges && tier > 0) {
+        let badge = this.badges.get(unit.id);
+        if (!badge) {
+          badge = new Graphics();
+          this.unitLayer.addChild(badge);
+          this.badges.set(unit.id, badge);
+        }
+        badge.visible = true;
+        badge.clear();
+        const pipCount = tier; // 1-4 pips
+        const totalWidth = (pipCount - 1) * BADGE_PIP_SPACING;
+        const startX = -totalWidth / 2;
+        for (let i = 0; i < pipCount; i++) {
+          badge.circle(startX + i * BADGE_PIP_SPACING, 0, BADGE_PIP_RADIUS);
+        }
+        badge.fill(BADGE_COLOR);
+        badge.position.set(renderX, renderY + radius + 4);
+      } else {
+        const badge = this.badges.get(unit.id);
+        if (badge) badge.visible = false;
+      }
     }
 
     // Remove sprites for destroyed/dead units
@@ -172,6 +207,12 @@ export class UnitRenderer {
         this.unitLayer.removeChild(sprite);
         sprite.destroy();
         this.sprites.delete(id);
+        const badge = this.badges.get(id);
+        if (badge) {
+          this.unitLayer.removeChild(badge);
+          badge.destroy();
+          this.badges.delete(id);
+        }
       }
     }
   }
@@ -182,6 +223,12 @@ export class UnitRenderer {
       sprite.destroy();
     }
     this.sprites.clear();
+
+    for (const badge of this.badges.values()) {
+      this.unitLayer.removeChild(badge);
+      badge.destroy();
+    }
+    this.badges.clear();
 
     for (const tex of this.textures.values()) {
       tex.destroy(true);

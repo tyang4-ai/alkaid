@@ -31,7 +31,6 @@ beforeEach(() => {
       },
     };
   } else {
-    const origCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       const el = createMockElement();
       el.tagName = tag.toUpperCase();

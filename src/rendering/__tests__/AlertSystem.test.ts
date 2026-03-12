@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventBus } from '../../core/EventBus';
-import { ALERT_BANNER_DURATION_MS, ALERT_MAX_VISIBLE, UnitType, UnitState, UnitCategory } from '../../constants';
+import { ALERT_BANNER_DURATION_MS, ALERT_MAX_VISIBLE } from '../../constants';
 
 function createMockElement(): any {
   const children: any[] = [];

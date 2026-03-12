@@ -122,7 +122,7 @@ describe('DamageCalculator', () => {
     const defender = makeUnit(UnitType.JI_HALBERDIERS);
 
     const xbowResult = calculateDamage(xbow, defender, TerrainType.PLAINS, false);
-    const archerResult = calculateDamage(archer, defender, TerrainType.PLAINS, false);
+    calculateDamage(archer, defender, TerrainType.PLAINS, false);
 
     // Both are ranged, but crossbow damage per tick is 1/3 of base
     expect(xbowResult.isRanged).toBe(true);

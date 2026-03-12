@@ -3,7 +3,7 @@ import { MoraleSystem, getRoutThreshold } from '../MoraleSystem';
 import { UnitManager } from '../../units/UnitManager';
 import { OrderManager } from '../../OrderManager';
 import { TerrainGrid } from '../../terrain/TerrainGrid';
-import { UnitType, UnitState, OrderType, TerrainType, TILE_SIZE } from '../../../constants';
+import { UnitType, UnitState, OrderType, TerrainType } from '../../../constants';
 import { eventBus } from '../../../core/EventBus';
 
 function makeGrid(terrain: TerrainType = TerrainType.PLAINS, w = 200, h = 150): TerrainGrid {

@@ -4,7 +4,7 @@ import { MoraleSystem } from '../MoraleSystem';
 import { UnitManager } from '../../units/UnitManager';
 import { PathManager } from '../../pathfinding/PathManager';
 import { TerrainGrid } from '../../terrain/TerrainGrid';
-import { UnitType, UnitState, TILE_SIZE, UNIT_TYPE_CONFIGS } from '../../../constants';
+import { UnitType, UnitState } from '../../../constants';
 
 function makeGrid(w = 50, h = 50): TerrainGrid {
   const terrain = new Uint8Array(w * h).fill(2); // PLAINS
@@ -83,7 +83,7 @@ describe('CombatSystem', () => {
   });
 
   it('applies damage over time and kills units', () => {
-    const attacker = um.spawn({
+    um.spawn({
       type: UnitType.HEAVY_CAVALRY, team: 0, x: 100, y: 100,
       experience: 50,
     });
@@ -154,8 +154,8 @@ describe('CombatSystem', () => {
   });
 
   it('getEngagedPairs returns unique combat pairs', () => {
-    const a = um.spawn({ type: UnitType.JI_HALBERDIERS, team: 0, x: 100, y: 100 });
-    const b = um.spawn({ type: UnitType.JI_HALBERDIERS, team: 1, x: 112, y: 100 });
+    um.spawn({ type: UnitType.JI_HALBERDIERS, team: 0, x: 100, y: 100 });
+    um.spawn({ type: UnitType.JI_HALBERDIERS, team: 1, x: 112, y: 100 });
 
     updateSpatialHash();
     cs.tick(0, um, pm.spatialHash, ms);

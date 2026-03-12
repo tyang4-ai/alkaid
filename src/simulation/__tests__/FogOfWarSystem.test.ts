@@ -370,7 +370,6 @@ describe('FogOfWarSystem', () => {
   it('fallback interval recomputes at tick % 4 === 0', () => {
     const unit = makeUnit(1, 15, 15, 0);
     fow.tick(0, [unit], [], null);
-    const v1 = fow.version;
 
     // tick 4 → should recompute via interval fallback even though stationary
     fow.tick(4, [unit], [], null);

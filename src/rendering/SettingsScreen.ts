@@ -1,5 +1,5 @@
 import type { SettingsManager } from '../core/SettingsManager';
-import { UI_SCALE_MIN, UI_SCALE_MAX, UI_SCALE_STEP, DifficultyLevel, DIFFICULTY_NAMES } from '../constants';
+import { UI_SCALE_MIN, UI_SCALE_MAX, UI_SCALE_STEP, DIFFICULTY_NAMES } from '../constants';
 import type { DifficultyLevel as DifficultyLevelType } from '../constants';
 import { AudioManager } from '../audio/AudioManager';
 

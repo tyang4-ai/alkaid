@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { BattleEventLogger } from '../BattleEventLogger';
-import { EventBus, eventBus } from '../../core/EventBus';
+import { eventBus } from '../../core/EventBus';
 import { UnitState } from '../../constants';
 
 function createMockUnitManager(teams: Map<number, Array<{ size: number; maxSize: number; morale: number; state: number }>>): any {

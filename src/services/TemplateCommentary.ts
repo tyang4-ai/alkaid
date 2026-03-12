@@ -14,7 +14,7 @@ export interface CommentaryContext {
 
 interface Template {
   text: string;
-  conditions?: Partial<Pick<CommentaryContext, 'weather' | 'morale' | 'casualties'>>;
+  conditions?: Partial<Pick<CommentaryContext, 'weather' | 'morale' | 'casualties' | 'timeOfDay'>>;
 }
 
 const ORDER_TEMPLATES: Record<string, Template[]> = {

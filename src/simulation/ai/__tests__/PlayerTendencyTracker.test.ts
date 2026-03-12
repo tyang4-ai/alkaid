@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EventBus } from '../../../core/EventBus';
 import { PlayerTendencyTracker } from '../PlayerTendencyTracker';
-import { OrderType, UnitType, UnitCategory, TENDENCY_FEATURE_COUNT, TENDENCY_HISTORY_MAX } from '../../../constants';
+import { OrderType, UnitType, TENDENCY_FEATURE_COUNT, TENDENCY_HISTORY_MAX } from '../../../constants';
 
 describe('PlayerTendencyTracker', () => {
   let eventBus: EventBus;
   let tracker: PlayerTendencyTracker;
-  const mockLookup = (unitId: number) => {
+  const mockLookup = (_unitId: number) => {
     // Default: team 0 infantry at center
     return { type: UnitType.JI_HALBERDIERS, team: 0, x: 1600, y: 1200 };
   };
@@ -95,7 +95,7 @@ describe('PlayerTendencyTracker', () => {
   });
 
   it('tracks deployment positions', () => {
-    const rangedLookup = (id: number) => ({
+    const rangedLookup = (_id: number) => ({
       type: UnitType.GONG_ARCHERS,
       team: 0,
       x: 800,

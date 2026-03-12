@@ -1,0 +1,432 @@
+{
+  "name": "Alkaid - Game Sprite Generation",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "category",
+              "value": "={{ $json.category || 'all' }}"
+            },
+            {
+              "name": "style_seed",
+              "value": "={{ $json.style_seed || '42' }}"
+            },
+            {
+              "name": "regenerate_only",
+              "value": "={{ $json.regenerate_only || 'false' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "name": "Set Parameters",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "style_prefix",
+              "value": "32x32 pixel art, ancient Chinese ink wash painting style (水墨画), muted earth tones, transparent background, top-down view, crisp edges, game sprite"
+            },
+            {
+              "name": "negative_prompt",
+              "value": "blurry, photorealistic, 3d render, text, watermark, signature, human figure, face, body, person, soldier, warrior, photograph, gradient background, anti-aliasing, soft edges"
+            },
+            {
+              "name": "model",
+              "value": "stable-diffusion-xl-1024-v1-0"
+            },
+            {
+              "name": "cfg_scale",
+              "value": "7.5"
+            },
+            {
+              "name": "steps",
+              "value": "30"
+            },
+            {
+              "name": "seed_base",
+              "value": "42"
+            },
+            {
+              "name": "width",
+              "value": "512"
+            },
+            {
+              "name": "height",
+              "value": "512"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000003",
+      "name": "Set Global Style",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "units",
+              "output": 0
+            },
+            {
+              "value": "terrain",
+              "output": 1
+            },
+            {
+              "value": "ui",
+              "output": 2
+            },
+            {
+              "value": "all",
+              "output": 3
+            }
+          ]
+        },
+        "dataType": "string",
+        "value1": "={{ $json.category }}"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000004",
+      "name": "Route by Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const assets = [\n  // === UNIT SPRITES (14 weapon/vehicle icons) ===\n  { name: 'sword', file: 'units/sword.png', suffix: 'single Chinese jian straight sword, bronze blade with jade handle, ink wash style, weapon icon' },\n  { name: 'spear', file: 'units/spear.png', suffix: 'single Chinese qiang spear, long wooden shaft with steel tip and red tassel, weapon icon' },\n  { name: 'halberd', file: 'units/halberd.png', suffix: 'single Chinese ji halberd, crescent blade on pole, bronze and wood, weapon icon' },\n  { name: 'bow', file: 'units/bow.png', suffix: 'single Chinese recurve bow with bamboo arrows, horn and sinew composite bow, weapon icon' },\n  { name: 'crossbow', file: 'units/crossbow.png', suffix: 'single Chinese nu crossbow, repeating crossbow mechanism, bronze trigger, weapon icon' },\n  { name: 'shield', file: 'units/shield.png', suffix: 'single Chinese round shield, lacquered wood with bronze boss and tiger motif, armor icon' },\n  { name: 'horse', file: 'units/horse.png', suffix: 'single war horse silhouette, armored Chinese cavalry horse, side view, ink wash style' },\n  { name: 'chariot', file: 'units/chariot.png', suffix: 'single Chinese war chariot, two-wheeled bronze chariot with canopy, vehicle icon, top-down' },\n  { name: 'siege_ram', file: 'units/siege_ram.png', suffix: 'single battering ram, wooden siege ram with iron head, covered frame, siege weapon icon' },\n  { name: 'trebuchet', file: 'units/trebuchet.png', suffix: 'single Chinese trebuchet, counterweight siege engine, wooden frame, siege weapon icon' },\n  { name: 'war_drum', file: 'units/war_drum.png', suffix: 'single large Chinese war drum, taiko-style drum on wooden stand with red lacquer, instrument icon' },\n  { name: 'banner', file: 'units/banner.png', suffix: 'single Chinese military banner, red silk flag with golden dragon emblem on bamboo pole, flag icon' },\n  { name: 'supply_cart', file: 'units/supply_cart.png', suffix: 'single Chinese supply wagon, wooden ox-cart loaded with grain sacks and barrels, vehicle icon' },\n  { name: 'fire_arrow', file: 'units/fire_arrow.png', suffix: 'single flaming arrow, arrow wrapped in oil-soaked cloth on fire, projectile icon, glowing' }\n];\n\nconst items = assets.map((asset, i) => ({\n  json: {\n    ...asset,\n    category: 'units',\n    prompt: `${$input.first().json.style_prefix}, ${asset.suffix}`,\n    negative_prompt: $input.first().json.negative_prompt,\n    seed: parseInt($input.first().json.seed_base) + i,\n    cfg_scale: parseFloat($input.first().json.cfg_scale),\n    steps: parseInt($input.first().json.steps),\n    width: parseInt($input.first().json.width),\n    height: parseInt($input.first().json.height),\n    model: $input.first().json.model,\n    output_path: `public/assets/sprites/${asset.file}`\n  }\n}));\n\nreturn items;"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000005",
+      "name": "Build Unit Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const terrainTypes = [\n  { type: 'grassland', suffix: 'flat grassland tile, green grass with small wildflowers, earth tones, seamless texture' },\n  { type: 'forest', suffix: 'dense forest canopy tile, bamboo and pine trees from above, dark green foliage, seamless' },\n  { type: 'mountain', suffix: 'rocky mountain tile, jagged grey peaks with snow caps, ink wash mountain style, seamless' },\n  { type: 'water', suffix: 'river water tile, flowing blue-green water with ripples, ink wash water style, seamless' },\n  { type: 'marsh', suffix: 'marshy wetland tile, muddy water with reeds and cattails, murky brown-green, seamless' },\n  { type: 'desert', suffix: 'sandy desert tile, yellow-tan sand dunes with wind patterns, arid earth tones, seamless' },\n  { type: 'farmland', suffix: 'cultivated rice paddy tile, neat rows of green rice plants in water, agricultural, seamless' },\n  { type: 'road', suffix: 'dirt road tile, packed brown earth path with wheel ruts, stone-lined edges, seamless' },\n  { type: 'bridge', suffix: 'wooden bridge tile, Chinese arched bridge planks from above, timber and rope, seamless' },\n  { type: 'fortification', suffix: 'stone wall tile, Chinese rammed earth fortification from above, grey-brown stone blocks, seamless' }\n];\n\nconst variants = [0, 1, 2, 3];\nconst assets = [];\n\nfor (const terrain of terrainTypes) {\n  for (const v of variants) {\n    assets.push({\n      name: `${terrain.type}_v${v}`,\n      file: `terrain/${terrain.type}_v${v}.png`,\n      suffix: `${terrain.suffix}, variant ${v + 1}`,\n      type: terrain.type,\n      variant: v\n    });\n  }\n}\n\nconst items = assets.map((asset, i) => ({\n  json: {\n    ...asset,\n    category: 'terrain',\n    prompt: `${$input.first().json.style_prefix}, ${asset.suffix}`,\n    negative_prompt: $input.first().json.negative_prompt,\n    seed: parseInt($input.first().json.seed_base) + 100 + i,\n    cfg_scale: parseFloat($input.first().json.cfg_scale),\n    steps: parseInt($input.first().json.steps),\n    width: parseInt($input.first().json.width),\n    height: parseInt($input.first().json.height),\n    model: $input.first().json.model,\n    output_path: `public/assets/sprites/${asset.file}`\n  }\n}));\n\nreturn items;"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000006",
+      "name": "Build Terrain Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const assets = [\n  { name: 'icon_attack', file: 'ui/icon_attack.png', suffix: 'attack command icon, crossed Chinese swords, red accent, minimal UI icon' },\n  { name: 'icon_defend', file: 'ui/icon_defend.png', suffix: 'defend command icon, Chinese shield with wall, blue accent, minimal UI icon' },\n  { name: 'icon_move', file: 'ui/icon_move.png', suffix: 'move command icon, running footprints arrow, green accent, minimal UI icon' },\n  { name: 'icon_retreat', file: 'ui/icon_retreat.png', suffix: 'retreat command icon, backward arrow with dust cloud, yellow accent, minimal UI icon' },\n  { name: 'icon_morale', file: 'ui/icon_morale.png', suffix: 'morale indicator icon, Chinese character for courage (勇) in circle, gold accent, UI icon' },\n  { name: 'icon_supply', file: 'ui/icon_supply.png', suffix: 'supply indicator icon, grain sack with rice, brown accent, minimal UI icon' },\n  { name: 'icon_fatigue', file: 'ui/icon_fatigue.png', suffix: 'fatigue indicator icon, tired moon/ZZZ symbol, purple accent, minimal UI icon' },\n  { name: 'icon_weather_clear', file: 'ui/icon_weather_clear.png', suffix: 'clear weather icon, bright sun with rays, warm yellow, minimal UI icon' },\n  { name: 'icon_weather_rain', file: 'ui/icon_weather_rain.png', suffix: 'rain weather icon, dark cloud with raindrops, blue-grey, minimal UI icon' },\n  { name: 'icon_weather_fog', file: 'ui/icon_weather_fog.png', suffix: 'fog weather icon, misty swirls, light grey layers, minimal UI icon' }\n];\n\nconst items = assets.map((asset, i) => ({\n  json: {\n    ...asset,\n    category: 'ui',\n    prompt: `${$input.first().json.style_prefix}, ${asset.suffix}`,\n    negative_prompt: $input.first().json.negative_prompt,\n    seed: parseInt($input.first().json.seed_base) + 200 + i,\n    cfg_scale: parseFloat($input.first().json.cfg_scale),\n    steps: parseInt($input.first().json.steps),\n    width: parseInt($input.first().json.width),\n    height: parseInt($input.first().json.height),\n    model: $input.first().json.model,\n    output_path: `public/assets/sprites/${asset.file}`\n  }\n}));\n\nreturn items;"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000007",
+      "name": "Build UI Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// When category is 'all', we generate all asset lists combined\nconst style_prefix = $input.first().json.style_prefix;\nconst negative_prompt = $input.first().json.negative_prompt;\nconst seed_base = parseInt($input.first().json.seed_base);\nconst cfg_scale = parseFloat($input.first().json.cfg_scale);\nconst steps = parseInt($input.first().json.steps);\nconst width = parseInt($input.first().json.width);\nconst height = parseInt($input.first().json.height);\nconst model = $input.first().json.model;\n\n// Unit assets\nconst units = [\n  { name: 'sword', file: 'units/sword.png', suffix: 'single Chinese jian straight sword, bronze blade with jade handle, ink wash style, weapon icon' },\n  { name: 'spear', file: 'units/spear.png', suffix: 'single Chinese qiang spear, long wooden shaft with steel tip and red tassel, weapon icon' },\n  { name: 'halberd', file: 'units/halberd.png', suffix: 'single Chinese ji halberd, crescent blade on pole, bronze and wood, weapon icon' },\n  { name: 'bow', file: 'units/bow.png', suffix: 'single Chinese recurve bow with bamboo arrows, horn and sinew composite bow, weapon icon' },\n  { name: 'crossbow', file: 'units/crossbow.png', suffix: 'single Chinese nu crossbow, repeating crossbow mechanism, bronze trigger, weapon icon' },\n  { name: 'shield', file: 'units/shield.png', suffix: 'single Chinese round shield, lacquered wood with bronze boss and tiger motif, armor icon' },\n  { name: 'horse', file: 'units/horse.png', suffix: 'single war horse silhouette, armored Chinese cavalry horse, side view, ink wash style' },\n  { name: 'chariot', file: 'units/chariot.png', suffix: 'single Chinese war chariot, two-wheeled bronze chariot with canopy, vehicle icon, top-down' },\n  { name: 'siege_ram', file: 'units/siege_ram.png', suffix: 'single battering ram, wooden siege ram with iron head, covered frame, siege weapon icon' },\n  { name: 'trebuchet', file: 'units/trebuchet.png', suffix: 'single Chinese trebuchet, counterweight siege engine, wooden frame, siege weapon icon' },\n  { name: 'war_drum', file: 'units/war_drum.png', suffix: 'single large Chinese war drum, taiko-style drum on wooden stand with red lacquer, instrument icon' },\n  { name: 'banner', file: 'units/banner.png', suffix: 'single Chinese military banner, red silk flag with golden dragon emblem on bamboo pole, flag icon' },\n  { name: 'supply_cart', file: 'units/supply_cart.png', suffix: 'single Chinese supply wagon, wooden ox-cart loaded with grain sacks and barrels, vehicle icon' },\n  { name: 'fire_arrow', file: 'units/fire_arrow.png', suffix: 'single flaming arrow, arrow wrapped in oil-soaked cloth on fire, projectile icon, glowing' }\n];\n\n// Terrain assets\nconst terrainTypes = [\n  { type: 'grassland', suffix: 'flat grassland tile, green grass with small wildflowers, earth tones, seamless texture' },\n  { type: 'forest', suffix: 'dense forest canopy tile, bamboo and pine trees from above, dark green foliage, seamless' },\n  { type: 'mountain', suffix: 'rocky mountain tile, jagged grey peaks with snow caps, ink wash mountain style, seamless' },\n  { type: 'water', suffix: 'river water tile, flowing blue-green water with ripples, ink wash water style, seamless' },\n  { type: 'marsh', suffix: 'marshy wetland tile, muddy water with reeds and cattails, murky brown-green, seamless' },\n  { type: 'desert', suffix: 'sandy desert tile, yellow-tan sand dunes with wind patterns, arid earth tones, seamless' },\n  { type: 'farmland', suffix: 'cultivated rice paddy tile, neat rows of green rice plants in water, agricultural, seamless' },\n  { type: 'road', suffix: 'dirt road tile, packed brown earth path with wheel ruts, stone-lined edges, seamless' },\n  { type: 'bridge', suffix: 'wooden bridge tile, Chinese arched bridge planks from above, timber and rope, seamless' },\n  { type: 'fortification', suffix: 'stone wall tile, Chinese rammed earth fortification from above, grey-brown stone blocks, seamless' }\n];\nconst terrain = [];\nfor (const t of terrainTypes) {\n  for (let v = 0; v < 4; v++) {\n    terrain.push({ name: `${t.type}_v${v}`, file: `terrain/${t.type}_v${v}.png`, suffix: `${t.suffix}, variant ${v + 1}` });\n  }\n}\n\n// UI assets\nconst ui = [\n  { name: 'icon_attack', file: 'ui/icon_attack.png', suffix: 'attack command icon, crossed Chinese swords, red accent, minimal UI icon' },\n  { name: 'icon_defend', file: 'ui/icon_defend.png', suffix: 'defend command icon, Chinese shield with wall, blue accent, minimal UI icon' },\n  { name: 'icon_move', file: 'ui/icon_move.png', suffix: 'move command icon, running footprints arrow, green accent, minimal UI icon' },\n  { name: 'icon_retreat', file: 'ui/icon_retreat.png', suffix: 'retreat command icon, backward arrow with dust cloud, yellow accent, minimal UI icon' },\n  { name: 'icon_morale', file: 'ui/icon_morale.png', suffix: 'morale indicator icon, Chinese character for courage (勇) in circle, gold accent, UI icon' },\n  { name: 'icon_supply', file: 'ui/icon_supply.png', suffix: 'supply indicator icon, grain sack with rice, brown accent, minimal UI icon' },\n  { name: 'icon_fatigue', file: 'ui/icon_fatigue.png', suffix: 'fatigue indicator icon, tired moon/ZZZ symbol, purple accent, minimal UI icon' },\n  { name: 'icon_weather_clear', file: 'ui/icon_weather_clear.png', suffix: 'clear weather icon, bright sun with rays, warm yellow, minimal UI icon' },\n  { name: 'icon_weather_rain', file: 'ui/icon_weather_rain.png', suffix: 'rain weather icon, dark cloud with raindrops, blue-grey, minimal UI icon' },\n  { name: 'icon_weather_fog', file: 'ui/icon_weather_fog.png', suffix: 'fog weather icon, misty swirls, light grey layers, minimal UI icon' }\n];\n\nconst all = [\n  ...units.map((a, i) => ({ ...a, category: 'units', seed: seed_base + i })),\n  ...terrain.map((a, i) => ({ ...a, category: 'terrain', seed: seed_base + 100 + i })),\n  ...ui.map((a, i) => ({ ...a, category: 'ui', seed: seed_base + 200 + i }))\n];\n\nreturn all.map(asset => ({\n  json: {\n    ...asset,\n    prompt: `${style_prefix}, ${asset.suffix}`,\n    negative_prompt,\n    cfg_scale,\n    steps,\n    width,\n    height,\n    model,\n    output_path: `public/assets/sprites/${asset.file}`\n  }\n}));"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000008",
+      "name": "Build All Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 700]
+    },
+    {
+      "parameters": {
+        "url": "https://api.stability.ai/v1/generation/{{ $json.model }}/text-to-image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text_prompts",
+              "value": "=[{\"text\": \"{{ $json.prompt }}\", \"weight\": 1}, {\"text\": \"{{ $json.negative_prompt }}\", \"weight\": -1}]"
+            },
+            {
+              "name": "cfg_scale",
+              "value": "={{ $json.cfg_scale }}"
+            },
+            {
+              "name": "steps",
+              "value": "={{ $json.steps }}"
+            },
+            {
+              "name": "seed",
+              "value": "={{ $json.seed }}"
+            },
+            {
+              "name": "width",
+              "value": "={{ $json.width }}"
+            },
+            {
+              "name": "height",
+              "value": "={{ $json.height }}"
+            },
+            {
+              "name": "samples",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1500
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000009",
+      "name": "Stability AI - Generate Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Stability AI API Key"
+        }
+      },
+      "notes": "SETUP: Create an HTTP Header Auth credential with Name='Authorization' and Value='Bearer sk-YOUR-STABILITY-KEY'. Rate limited to 1 request per 1.5s."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Post-process: decode base64 image from Stability AI response\n// Then resize to 32x32 using Sharp (must be installed in n8n environment)\n//\n// If Sharp is not available, this node outputs the raw image\n// and you can resize externally or use a downstream ImageMagick node.\n\nconst items = [];\n\nfor (const item of $input.all()) {\n  const artifacts = item.json.artifacts || item.json.images || [];\n  const artifact = artifacts[0];\n  \n  if (!artifact) {\n    items.push({\n      json: {\n        error: `No image generated for ${item.json.name}`,\n        name: item.json.name,\n        output_path: item.json.output_path\n      }\n    });\n    continue;\n  }\n\n  const base64Image = artifact.base64;\n  const imageBuffer = Buffer.from(base64Image, 'base64');\n\n  let finalBuffer;\n  try {\n    // Attempt Sharp resize to 32x32\n    const sharp = require('sharp');\n    finalBuffer = await sharp(imageBuffer)\n      .resize(32, 32, {\n        fit: 'contain',\n        background: { r: 0, g: 0, b: 0, alpha: 0 }\n      })\n      .png()\n      .toBuffer();\n  } catch (e) {\n    // Sharp not available - pass through raw image\n    // User should resize manually or install Sharp in n8n\n    finalBuffer = imageBuffer;\n  }\n\n  const binaryData = await this.helpers.prepareBinaryData(\n    finalBuffer,\n    item.json.name + '.png',\n    'image/png'\n  );\n\n  items.push({\n    json: {\n      name: item.json.name,\n      category: item.json.category,\n      output_path: item.json.output_path,\n      size: finalBuffer.length,\n      resized: true\n    },\n    binary: {\n      data: binaryData\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000010",
+      "name": "Post-Process & Resize to 32x32",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 400]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ $json.output_path }}",
+        "options": {
+          "append": false
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000011",
+      "name": "Save Sprite File",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [1680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Summary node - collect results\nconst results = $input.all();\nconst summary = {\n  total: results.length,\n  successful: results.filter(r => !r.json.error).length,\n  failed: results.filter(r => r.json.error).length,\n  errors: results.filter(r => r.json.error).map(r => r.json),\n  generated: results.filter(r => !r.json.error).map(r => ({\n    name: r.json.name,\n    path: r.json.output_path,\n    size: r.json.size\n  }))\n};\n\nreturn [{ json: summary }];"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000012",
+      "name": "Generation Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Parameters": {
+      "main": [
+        [
+          {
+            "node": "Set Global Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Global Style": {
+      "main": [
+        [
+          {
+            "node": "Route by Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Category": {
+      "main": [
+        [
+          {
+            "node": "Build Unit Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Terrain Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build UI Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build All Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Unit Prompts": {
+      "main": [
+        [
+          {
+            "node": "Stability AI - Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Terrain Prompts": {
+      "main": [
+        [
+          {
+            "node": "Stability AI - Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build UI Prompts": {
+      "main": [
+        [
+          {
+            "node": "Stability AI - Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build All Prompts": {
+      "main": [
+        [
+          {
+            "node": "Stability AI - Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stability AI - Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Post-Process & Resize to 32x32",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post-Process & Resize to 32x32": {
+      "main": [
+        [
+          {
+            "node": "Save Sprite File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Sprite File": {
+      "main": [
+        [
+          {
+            "node": "Generation Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "alkaid",
+      "id": "1"
+    },
+    {
+      "name": "asset-generation",
+      "id": "2"
+    },
+    {
+      "name": "sprites",
+      "id": "3"
+    }
+  ],
+  "meta": {
+    "instanceId": "alkaid-war-game",
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}

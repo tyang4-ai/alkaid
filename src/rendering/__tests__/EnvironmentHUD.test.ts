@@ -18,11 +18,10 @@ function createMockElement(): any {
 }
 
 // Shim document.createElement if needed
-const origDoc = globalThis.document;
 beforeEach(() => {
   if (!globalThis.document) {
     (globalThis as any).document = {
-      createElement: (tag: string) => createMockElement(),
+      createElement: (_tag: string) => createMockElement(),
     };
   }
 });

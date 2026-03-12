@@ -316,6 +316,124 @@ export class AudioPlaceholders {
     };
   }
 
+  /**
+   * Procedural battle music using Chinese pentatonic scale (C, D, E, G, A).
+   * Guqin-style arpeggios during calm, adds drums when combat fires.
+   * Returns a stop function and a method to intensify when combat occurs.
+   */
+  battleMusic(volume: number): { stop(): void; intensify(): void } {
+    const ctx = this.getContext();
+    const now = ctx.currentTime;
+
+    // Chinese pentatonic scale frequencies (C4, D4, E4, G4, A4, C5, D5, E5)
+    const PENTATONIC = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+
+    let stopped = false;
+    let intense = false;
+    let nextNoteTimeout: ReturnType<typeof setTimeout> | null = null;
+    let drumTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    // Master gain for fade-in/out
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0, now);
+    masterGain.gain.linearRampToValueAtTime(volume * 0.3, now + 2);
+    masterGain.connect(ctx.destination);
+
+    // Play a single guqin-like note (plucked string simulation)
+    const playNote = (freq: number, time: number, dur: number) => {
+      if (stopped) return;
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+
+      // Second harmonic for richness
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.value = freq * 2;
+
+      const noteGain = ctx.createGain();
+      noteGain.gain.setValueAtTime(0.25, time);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+      const noteGain2 = ctx.createGain();
+      noteGain2.gain.setValueAtTime(0.08, time);
+      noteGain2.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.7);
+
+      osc.connect(noteGain).connect(masterGain);
+      osc2.connect(noteGain2).connect(masterGain);
+      osc.start(time);
+      osc.stop(time + dur);
+      osc2.start(time);
+      osc2.stop(time + dur);
+    };
+
+    // Arpeggio pattern generator
+    let noteIndex = 0;
+    const patterns = [
+      [0, 2, 4, 2],    // C E G E
+      [1, 3, 5, 3],    // D G C5 G
+      [0, 4, 5, 4],    // C A C5 A
+      [2, 4, 6, 4],    // E A D5 A
+    ];
+    let patternIndex = 0;
+
+    const scheduleArpeggio = () => {
+      if (stopped) return;
+      const pattern = patterns[patternIndex % patterns.length];
+      const baseTime = ctx.currentTime;
+      const noteSpacing = intense ? 0.25 : 0.4; // Faster when intense
+
+      for (let i = 0; i < pattern.length; i++) {
+        const freq = PENTATONIC[pattern[i]];
+        playNote(freq, baseTime + i * noteSpacing, intense ? 0.5 : 0.8);
+      }
+
+      patternIndex++;
+      noteIndex++;
+
+      // Vary pattern every 4 cycles
+      if (noteIndex % 4 === 0) {
+        patternIndex = Math.floor(Math.random() * patterns.length);
+      }
+
+      const nextDelay = (pattern.length * noteSpacing + (intense ? 0.2 : 0.5)) * 1000;
+      nextNoteTimeout = setTimeout(scheduleArpeggio, nextDelay);
+    };
+
+    // Drum pattern for intense combat
+    const scheduleDrums = () => {
+      if (stopped || !intense) {
+        drumTimeout = null;
+        return;
+      }
+      this.drumBeat(volume * 0.5);
+      drumTimeout = setTimeout(scheduleDrums, 500);
+    };
+
+    // Start arpeggios
+    scheduleArpeggio();
+
+    return {
+      intensify: () => {
+        if (intense || stopped) return;
+        intense = true;
+        // Boost volume slightly
+        masterGain.gain.linearRampToValueAtTime(volume * 0.45, ctx.currentTime + 0.5);
+        scheduleDrums();
+      },
+      stop: () => {
+        stopped = true;
+        // Fade out
+        masterGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+        if (nextNoteTimeout !== null) clearTimeout(nextNoteTimeout);
+        if (drumTimeout !== null) clearTimeout(drumTimeout);
+        setTimeout(() => {
+          try { masterGain.disconnect(); } catch { /* already disconnected */ }
+        }, 2000);
+      },
+    };
+  }
+
   /** Clean up the AudioContext. */
   destroy(): void {
     if (this.ctx) {

@@ -1,6 +1,6 @@
 # Alkaid (破军) — Implementation Progress
 
-Last updated: 2026-03-05
+Last updated: 2026-03-12
 
 ## Phase 1: Core Engine
 
@@ -58,9 +58,9 @@ Last updated: 2026-03-05
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 17 | Asset creation (Gemini) | TODO | 16x16 sprites, terrain tiles, UI elements |
-| 18 | Visual polish | TODO | Animations, transitions, weather effects |
-| 19 | Audio | TODO | Battle sounds, ambient, music |
+| 17 | Asset creation (Gemini) | IN PROGRESS | n8n workflows created for AI-generated sprites (image-workflow.json) and audio (audio-workflow.json). Prompts for 64 sprites + 15 audio assets. Awaiting user to run workflows. |
+| 18 | Visual polish | DONE | TutorialOverlay (5-slide first-run tutorial), LoadingScreen (animated terrain generation), BattleLogPanel (L-key toggle, last 20 events), KeyboardHelpPopup (?-key hotkey reference), unit veterancy badges (gold pips at zoom>1.5x). |
+| 19 | Audio | DONE | Procedural battle music (pentatonic arpeggios + drum intensification), battle_theme mapped via SoundMap. All SFX/ambient placeholders from Step 19 prior session. |
 
 ## Hackathon: AI War Room (DigitalOcean Gradient)
 
@@ -101,4 +101,5 @@ Last updated: 2026-03-05
 - **2026-03-04**: Steps 14b-14e complete. QoL + Tech batch. 12 new source files + 8 test files + 5 worker/type files across 2 commits (3148 insertions). PathWorkerClient/Adapter (Web Worker pathfinding), Minimap (Canvas2D overlay with click-to-pan), TooltipSystem (unit hover stats), OrderQueueRenderer (shift+right-drag queued waypoints), ReplayRecorder/ReplayPlayer/ReplayControls (deterministic battle replay with scrubbing), SettingsManager/SettingsScreen (colorblind palettes, UI scale), PerfMonitor (F3 debug overlay). OrderManager extended to 8-order queue. main.ts integration: all systems wired into game loop, battle start/end, replay mode entry from AfterActionReport. 57 new tests (750 total).
 - **2026-03-02**: Step 11 complete. Save system. Serializable<T> interface on all 11 stateful systems (GameState, UnitManager, OrderManager, SupplySystem, SurrenderSystem, CommandSystem, WeatherSystem, TimeOfDaySystem, DeploymentManager, RetreatSystem, BattleEventLogger). SaveManager (IndexedDB persistent saves + localStorage emergency recovery), SaveValidator (runtime type checking), MigrationChain (version-based migration). SaveLoadScreen (Civ 6-style full-screen overlay with named saves, delete, export/import). PauseMenu 4 save buttons (Quick Save/Load, Save/Load Game). SaveToast notification. Auto-save every 60s during battle, emergency save on beforeunload. 32 new tests (450 total). Visual testing deferred (Chrome MCP unavailable).
 - **2026-03-06**: Hackathon AI War Room (H2-H3, H5-H9, H11, H13). Agent knowledge base (Art of War + 36 Stratagems + unit guide + mechanics + historical battles), ONNX inference pipeline (OnnxWorker + RLController + AIAdapter), FastAPI backend (chat/simulate/training routes), AgentChatPanel (right sidebar with typewriter + context), Training Dashboard (Canvas2D charts + metrics + architecture), LandingScreen, README + MIT license. onnxruntime-web installed. BattleAnalyzer extracts live battle context for agent chat. 750 TS tests + 100 Python tests pass.
+- **2026-03-12**: Final Polish. Fixed 42 TS build errors (1 real bug in TemplateCommentary.ts + 41 unused imports across 19 files). Added 6 UX improvements: TutorialOverlay (5-slide first-run tutorial with "don't show again"), LoadingScreen (animated dots during terrain gen), BattleLogPanel (left sidebar, L-key toggle, 20 events), KeyboardHelpPopup (?-key compact modal), unit veterancy badges (gold pips below units at zoom>1.5x), procedural battle music (pentatonic arpeggios + combat drum intensification via SoundMap). Created n8n workflows for AI asset generation (image-workflow.json + audio-workflow.json + README). 0 TS errors, 798 tests pass, build succeeds.
 - **2026-03-05**: Step 15 complete (15a-15h). Full Python RL training environment. 8 sub-steps: (15a) shared/constants.json + load_constants.py, pyproject.toml. (15b) env/types.py (all enums+dataclasses), terrain.py (OpenSimplex fBm), random.py (mulberry32 bit-for-bit port), spatial_hash.py. (15c) pathfinding.py (A*), combat.py (12-factor DamageCalculator + CombatSystem), morale.py (12 modifiers + rout cascade), supply.py, fatigue.py, experience.py, surrender.py (5-factor pressure). (15d) game.py (Game class wiring all systems in exact tick order), command.py (messenger dispatch/delivery), environment.py (weather + time-of-day). (15e) alkaid_env.py (Gymnasium wrapper, MultiDiscrete action space 32x[10,20,15], Box obs 2582 float32, action masking), obs_builder.py (40 unit features + 22 global), reward.py (per-step shaping + terminal). (15f) 4 scripted bots (rush, defensive, flanker, balanced). (15g) training pipeline (MaskablePPO, SubprocVecEnv, 5-stage curriculum, callbacks, ONNX export, benchmark). (15h) 5 parity tests. 105 Python tests pass, 750 TS tests pass.

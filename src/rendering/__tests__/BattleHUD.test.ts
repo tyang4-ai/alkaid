@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { UnitState, UnitType, DeploymentPhase } from '../../constants';
+import { UnitState } from '../../constants';
 
 function createMockElement(): any {
   const children: any[] = [];

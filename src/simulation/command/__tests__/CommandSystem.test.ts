@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { CommandSystem } from '../CommandSystem';
 import { UnitManager } from '../../units/UnitManager';
 import { OrderManager } from '../../OrderManager';
 import { PathManager } from '../../pathfinding/PathManager';
 import { TerrainGrid } from '../../terrain/TerrainGrid';
 import {
-  UnitType, OrderType, UnitState, TILE_SIZE, SIM_TICK_RATE,
-  MESSENGER_SPEED, MESSENGER_SPEED_IN_RADIUS,
+  UnitType, OrderType,
+  MESSENGER_SPEED,
 } from '../../../constants';
 
 function makeGrid(w = 50, h = 50): TerrainGrid {
@@ -63,7 +63,7 @@ describe('CommandSystem', () => {
   });
 
   it('messenger travels and delivers order', () => {
-    const general = um.spawn({ type: UnitType.GENERAL, team: 0, x: 100, y: 100, isGeneral: true });
+    um.spawn({ type: UnitType.GENERAL, team: 0, x: 100, y: 100, isGeneral: true });
     const unit = um.spawn({ type: UnitType.JI_HALBERDIERS, team: 0, x: 116, y: 100 }); // 1 tile away
 
     cs.issueOrder(
@@ -197,7 +197,7 @@ describe('CommandSystem', () => {
   });
 
   it('movement orders wire to pathfinding on delivery', () => {
-    const general = um.spawn({ type: UnitType.GENERAL, team: 0, x: 100, y: 100, isGeneral: true });
+    um.spawn({ type: UnitType.GENERAL, team: 0, x: 100, y: 100, isGeneral: true });
     const unit = um.spawn({ type: UnitType.JI_HALBERDIERS, team: 0, x: 116, y: 100 });
 
     cs.issueOrder(
