@@ -193,34 +193,13 @@ class AlkaidEnv(gym.Env):
         return obs, reward, terminated, truncated, info
 
     def action_masks(self) -> np.ndarray:
-        """Return action mask for MaskablePPO.
+        """Return per-value action mask for MaskablePPO MultiDiscrete.
 
-        Shape: (96,) where each group of 3 corresponds to [order, x_bin, y_bin].
-        For dead/routing units, only NO_OP is valid.
+        Shape: (1440,) = 32 units * (10 order + 20 x_bin + 15 y_bin).
+        Each sub-action gets a boolean mask over its possible values.
         """
-        mask = np.ones(MAX_UNITS * 3, dtype=np.int8)
-
-        for i in range(MAX_UNITS):
-            base = i * 3
-
-            if i >= len(self._own_units_order):
-                # Empty slot — only allow NO_OP
-                order_mask = np.zeros(NUM_ORDER_TYPES, dtype=np.int8)
-                order_mask[NO_OP] = 1
-                # All x/y bins valid (ignored for NO_OP)
-            else:
-                unit = self._own_units_order[i]
-                if unit.state in (UnitState.DEAD, UnitState.ROUTING):
-                    order_mask = np.zeros(NUM_ORDER_TYPES, dtype=np.int8)
-                    order_mask[NO_OP] = 1
-                else:
-                    order_mask = np.ones(NUM_ORDER_TYPES, dtype=np.int8)
-
-            # Store masks — this is a simplified version.
-            # Full per-sub-action masking requires SB3's MaskableMultiDiscrete.
-            # For now we store the order validity in info dict.
-
-        return mask
+        masks = self.get_action_masks()
+        return np.concatenate(masks)
 
     def get_action_masks(self) -> list[np.ndarray]:
         """Return per-sub-action masks for sb3_contrib MaskablePPO.

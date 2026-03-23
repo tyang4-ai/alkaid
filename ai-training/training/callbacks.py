@@ -69,18 +69,27 @@ class WinrateCallback(BaseCallback):
 
 
 class PeriodicSaveCallback(BaseCallback):
-    """Save model at regular intervals."""
+    """Save model and training state at regular intervals."""
 
-    def __init__(self, save_freq: int, save_dir: str, verbose: int = 1) -> None:
+    def __init__(self, save_freq: int, save_dir: str, curriculum: CurriculumManager | None = None, verbose: int = 1) -> None:
         super().__init__(verbose)
         self.save_freq = save_freq
         self.save_dir = save_dir
+        self.curriculum = curriculum
 
     def _on_step(self) -> bool:
         if self.n_calls % self.save_freq == 0:
+            import json
             os.makedirs(self.save_dir, exist_ok=True)
             path = os.path.join(self.save_dir, f"model_{self.num_timesteps}")
             self.model.save(path)
+            # Save training state for auto-resume
+            state = {"timesteps": self.num_timesteps}
+            if self.curriculum is not None:
+                state["stage"] = self.curriculum.current_stage_idx
+            state_path = os.path.join(self.save_dir, "training_state.json")
+            with open(state_path, "w") as f:
+                json.dump(state, f)
             if self.verbose:
                 print(f"[Save] {path} ({self.num_timesteps} timesteps)")
         return True

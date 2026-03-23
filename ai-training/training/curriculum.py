@@ -94,6 +94,12 @@ class CurriculumManager:
 
         return False
 
+    def advance_to(self, stage_idx: int) -> None:
+        """Jump directly to a specific stage (for resuming from checkpoint)."""
+        self.current_stage_idx = min(stage_idx, len(self.stages) - 1)
+        self.stage_wins = 0
+        self.stage_episodes = 0
+
     def _advance(self) -> bool:
         if self.current_stage_idx >= len(self.stages) - 1:
             return False

@@ -42,7 +42,7 @@ class TrainingConfig:
     # Training loop
     total_timesteps: int = 50_000_000
     eval_freq: int = 50_000
-    save_freq: int = 100_000
+    save_freq: int = 25_000
     log_dir: str = "logs"
     save_dir: str = "checkpoints"
 

@@ -1,0 +1,18 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    environment:
+      - GENERIC_TIMEZONE=America/New_York
+      - N8N_SECURE_COOKIE=false
+      - NODE_FUNCTION_ALLOW_EXTERNAL=sharp,child_process,fs,path,os
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../public/assets:/assets
+    restart: unless-stopped
+
+volumes:
+  n8n_data:

@@ -120,7 +120,21 @@ def main():
         action="store_true",
         help="Disable cosine LR schedule (use constant LR)",
     )
+    parser.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Start fresh, ignore existing checkpoints",
+    )
     args = parser.parse_args()
+
+    # Auto-detect latest checkpoint for resuming
+    if args.resume is None and not args.no_resume:
+        import glob
+        ckpt_pattern = os.path.join(args.save_dir, "model_*.zip")
+        checkpoints = sorted(glob.glob(ckpt_pattern), key=os.path.getmtime)
+        if checkpoints:
+            args.resume = checkpoints[-1].replace(".zip", "")
+            print(f"[Resume] Auto-detected checkpoint: {args.resume}")
 
     try:
         from sb3_contrib import MaskablePPO
@@ -199,6 +213,16 @@ def main():
     curriculum = CurriculumManager()
     self_play_mgr = SelfPlayManager(max_pool_size=config.self_play_pool_size)
 
+    # Restore curriculum state if resuming
+    if args.resume:
+        import json as _json
+        state_path = os.path.join(args.save_dir, "training_state.json")
+        if os.path.exists(state_path):
+            with open(state_path) as f:
+                _state = _json.load(f)
+            curriculum.advance_to(_state.get("stage", 0))
+            print(f"[Resume] Restored curriculum stage: {curriculum.stage_name} (stage {_state.get('stage', 0)})")
+
     print(f"Starting curriculum stage: {curriculum.stage_name}")
 
     # Create vectorized environments (bot curriculum phase)
@@ -243,7 +267,7 @@ def main():
     # Callbacks
     callbacks = [
         WinrateCallback(curriculum, save_dir=config.save_dir),
-        PeriodicSaveCallback(config.save_freq, config.save_dir),
+        PeriodicSaveCallback(config.save_freq, config.save_dir, curriculum=curriculum),
     ]
 
     if config.self_play_enabled:
